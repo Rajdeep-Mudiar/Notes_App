@@ -147,8 +147,11 @@ def get_ingestion_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -
 
 def get_embedding_service() -> EmbeddingService:
     from app.core.config import settings
-    gemini_key = getattr(settings, "GEMINI_API_KEY", None)
-    return EmbeddingService(api_key=gemini_key)
+    return EmbeddingService(
+        api_key=settings.GEMINI_API_KEY,
+        hf_api_key=settings.HUGGINGFACE_API_KEY,
+        hf_model=settings.HUGGINGFACE_EMBEDDING_MODEL,
+    )
 
 
 def get_ingestion_service(
@@ -174,11 +177,14 @@ def get_rag_service(
     ai_repo: AiRepository = Depends(get_ai_repository),
 ) -> RagService:
     from app.core.config import settings
-    gemini_key = getattr(settings, "GEMINI_API_KEY", None)
     return RagService(
         ingestion_service=ingestion_service,
         ai_repo=ai_repo,
-        gemini_api_key=gemini_key,
+        groq_api_keys=settings.GROQ_API_KEYS or settings.GROQ_API_KEY,
+        groq_model=settings.GROQ_MODEL,
+        gemini_api_key=settings.GEMINI_API_KEY,
+        hf_api_key=settings.HUGGINGFACE_API_KEY,
+        hf_chat_model=settings.HUGGINGFACE_CHAT_MODEL,
     )
 
 

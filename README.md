@@ -129,7 +129,13 @@ sudo systemctl start mongod
    HOST="0.0.0.0"
    PORT=8000
 
-   # (Optional) Google Gemini API Key for Enhanced Cloud LLM RAG Synthesis
+   # AI & Study Assistant (Hugging Face Free Serverless Inference)
+   # Free token from https://huggingface.co/settings/tokens
+   HUGGINGFACE_API_KEY=""
+   HUGGINGFACE_CHAT_MODEL="meta-llama/Llama-3.2-3B-Instruct"
+   HUGGINGFACE_EMBEDDING_MODEL="sentence-transformers/all-mpnet-base-v2"
+
+   # (Optional) Google Gemini API Key
    GEMINI_API_KEY=""
    ```
 

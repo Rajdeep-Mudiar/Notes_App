@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from app.api.deps import get_auth_service
 from app.services.auth_service import AuthService
 from app.schemas.user import UserCreate, UserLogin
-from app.schemas.auth import AuthData, TokenResponse, RefreshTokenRequest
+from app.schemas.auth import AuthData, TokenResponse, RefreshTokenRequest, GoogleAuthRequest
 from app.schemas.response import ApiResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -32,6 +32,20 @@ async def login(
     return ApiResponse(
         success=True,
         message="Logged in successfully.",
+        data=data
+    )
+
+
+@router.post("/google", response_model=ApiResponse[AuthData])
+async def google_login(
+    google_in: GoogleAuthRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Authenticate student via Sign In with Google."""
+    data = await auth_service.google_login(google_in)
+    return ApiResponse(
+        success=True,
+        message="Google sign in successful.",
         data=data
     )
 

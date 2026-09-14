@@ -1,0 +1,129 @@
+name: Build, Test & Release Student OS
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # -------------------------------------------------------------
+  # 1. Backend Test Suite
+  # -------------------------------------------------------------
+  backend-test:
+    name: Test FastAPI Backend
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Backend Master Verification Suite
+        env:
+          MONGODB_URL: mongodb://localhost:27017
+          DATABASE_NAME: student_os_test
+          JWT_SECRET: github_actions_ci_secret_key_2026_dev
+          ENVIRONMENT: test
+        run: |
+          cd backend
+          python test_master_e2e.py
+
+  # -------------------------------------------------------------
+  # 2. Flutter Build APK & Publish GitHub Release
+  # -------------------------------------------------------------
+  build-and-release:
+    name: Build & Release Android APK
+    needs: backend-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter Dependencies
+        run: |
+          cd frontend
+          flutter pub get
+
+      - name: Analyze & Test Flutter App
+        run: |
+          cd frontend
+          flutter analyze
+          flutter test --no-pub
+
+      - name: Build Android Release APK
+        run: |
+          cd frontend
+          flutter build apk --release
+
+      - name: Determine Release Tag
+        id: vars
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v1.0.$(date +'%Y%m%d%H%M')"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "APK_PATH=frontend/build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_ENV
+
+      - name: Rename APK for Release
+        run: |
+          cp frontend/build/app/outputs/flutter-apk/app-release.apk frontend/StudentOS-${{ steps.vars.outputs.tag }}.apk
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: "Student OS Release ${{ steps.vars.outputs.tag }}"
+          body: |
+            ## 🚀 Student OS Release ${{ steps.vars.outputs.tag }}
+            
+            ### ✨ What's New & Included:
+            - **Native Google Sign-In**: 1-tap sign-in with Google / Gmail account.
+            - **Real LLM Assistant**: Grounded Q&A, Dynamic Quizzes, Flashcards & Exam Cheat Sheets with Groq & Gemini.
+            - **Mobile Responsiveness**: Zero pixel overflows across all dialogs and screens.
+            - **Block Notes & Smart Organization**: Fast, distraction-free studying.
+            
+            ### 📥 Download Android APK:
+            Download and install `StudentOS-${{ steps.vars.outputs.tag }}.apk` below on your Android phone.
+          files: |
+            frontend/StudentOS-${{ steps.vars.outputs.tag }}.apk
+            frontend/build/app/outputs/flutter-apk/app-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

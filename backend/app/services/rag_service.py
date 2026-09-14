@@ -31,19 +31,28 @@ logger = logging.getLogger(__name__)
 class RagService:
     """Retrieval-Augmented Generation (RAG) and AI Study Assistant Service."""
 
+    _groq_index: int = 0
+
     def __init__(
         self,
         ingestion_service: IngestionService,
         ai_repo: AiRepository,
+        groq_api_keys: Optional[str] = None,
+        groq_model: str = "llama-3.3-70b-versatile",
         gemini_api_key: Optional[str] = None,
+        hf_api_key: Optional[str] = None,
+        hf_chat_model: str = "meta-llama/Llama-3.2-3B-Instruct",
     ):
         self.ingestion_service = ingestion_service
         self.ai_repo = ai_repo
+        self.groq_keys = [k.strip() for k in (groq_api_keys or "").split(",") if k.strip()]
+        self.groq_model = groq_model or "llama-3.3-70b-versatile"
         self.gemini_api_key = gemini_api_key
+        self.hf_api_key = hf_api_key
+        self.hf_chat_model = hf_chat_model or "meta-llama/Llama-3.2-3B-Instruct"
 
     async def chat_grounded(self, user_id: str, req: ChatRequest) -> ChatResponse:
         """Perform grounded Q&A with in-text citations using retrieved course knowledge."""
-        # 1. Retrieve top-k semantic chunks
         search_res = await self.ingestion_service.search_similar_chunks(
             user_id=user_id,
             search_query=SemanticSearchQuery(
@@ -75,7 +84,6 @@ class RagService:
                 f"[Source {idx + 1}: {item.source_name}{loc}]\n{item.text_content}"
             )
 
-        # 2. Synthesize answer with grounding
         reply = await self._synthesize_chat_reply(
             user_question=req.message,
             context_blocks=context_blocks,
@@ -83,7 +91,6 @@ class RagService:
             history=req.history,
         )
 
-        # 3. Persist conversation turn
         user_msg = ChatMessageModel(
             role="user",
             content=req.message,
@@ -119,89 +126,57 @@ class RagService:
         citations: List[CitationItemModel],
         history: List[ChatMessageModel],
     ) -> str:
-        """Call Gemini API or run deterministic study synthesizer."""
-        if self.gemini_api_key and context_blocks:
-            try:
-                gemini_answer = self._call_gemini_chat(user_question, context_blocks, history)
-                if gemini_answer and len(gemini_answer.strip()) > 20:
-                    return gemini_answer
-            except Exception as e:
-                logger.warning(f"Gemini chat API call failed: {e}. Falling back to deterministic synthesizer.")
+        """Generate response via LLM (Gemini / HF) or dynamic grounded synthesis."""
+        system_instruction = (
+            "You are Student OS AI, an intelligent, encouraging academic study assistant for university students. "
+            "Your task is to answer the student's question accurately using the provided course material excerpts. "
+            "Cite sources cleanly in the format [Source Name, Page/Section]. Use markdown with clear headings, bullet points, "
+            "and code/math blocks. If the excerpts don't contain the answer, answer helpfully with academic principles and mention this."
+        )
+
+        context_str = "\n\n".join(context_blocks) if context_blocks else "No specific course excerpts indexed for this query."
+        user_prompt = f"Course Material Excerpts:\n{context_str}\n\nStudent Question:\n{user_question}"
+
+        # 1. Try LLM (Gemini / Hugging Face)
+        llm_reply = self._call_llm_text(
+            prompt=user_prompt,
+            system_instruction=system_instruction,
+            history=history,
+        )
+        if llm_reply and len(llm_reply.strip()) > 20:
+            return llm_reply.strip()
 
         # Fallback intelligent study synthesizer
         if not context_blocks:
             return (
-                f"I couldn't find any relevant study materials indexed in your workspace for **\"{user_question}\"**.\n\n"
-                "💡 *Tip: Make sure you've uploaded your lecture slides, notes, or reading files and clicked 'Index for AI'.*"
+                f"I couldn't find indexed course documents for **\"{user_question}\"** in this workspace yet.\n\n"
+                "💡 *Tip: Upload your lecture slides, notes, or reading files and click 'Index for AI' to get grounded answers.*"
             )
 
-        # Build structured synthesis quoting top source
         primary_citation = citations[0]
-        primary_snippet = primary_citation.snippet.replace("...", "")
-
         bullet_points = []
-        for i, c in enumerate(citations[:3]):
+        for c in citations[:3]:
             section_tag = f" ({c.page_or_section})" if c.page_or_section else ""
-            bullet_points.append(
-                f"* **{c.source_name}{section_tag}**: {c.snippet.strip()}"
-            )
+            bullet_points.append(f"* **{c.source_name}{section_tag}**: {c.snippet.strip()}")
 
         bullet_text = "\n".join(bullet_points)
-        source_badge = f"[{primary_citation.source_name}, {primary_citation.page_or_section or 'General'}]"
+        source_badge = f"[{primary_citation.source_name}, {primary_citation.page_or_section or 'Course Notes'}]"
 
         return (
             f"Based on your course materials in **{source_badge}**:\n\n"
             f"{bullet_text}\n\n"
             f"### Key Concept Summary\n"
-            f"> \"{primary_snippet}\"\n\n"
-            f"**Study Insight**: When preparing for exams, ensure you review how this connects with related lecture topics."
+            f"> \"{primary_citation.snippet.replace('...', '')}\"\n\n"
+            f"**Study Insight**: When preparing for assessments, connect this topic with related lecture themes and review practical examples."
         )
 
-    def _call_gemini_chat(
-        self,
-        question: str,
-        context_blocks: List[str],
-        history: List[ChatMessageModel],
-    ) -> Optional[str]:
-        """Send prompt to Gemini 1.5 with grounding instructions."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_api_key}"
-
-        system_instruction = (
-            "You are Student OS AI, an intelligent, encouraging academic study assistant for university students. "
-            "Your task is to answer the student's question based strictly on the provided course material excerpts. "
-            "Always cite sources in the format [Source Name, Page/Slide/Section]. Use clear markdown, bold key terms, "
-            "and format code or formulas cleanly. If the material does not contain the answer, politely state so."
-        )
-
-        context_str = "\n\n".join(context_blocks)
-        prompt_text = f"Context from student's course materials:\n{context_str}\n\nStudent's Question: {question}"
-
-        payload = {
-            "contents": [
-                {"role": "user", "parts": [{"text": prompt_text}]}
-            ],
-            "systemInstruction": {
-                "parts": [{"text": system_instruction}]
-            },
-            "generationConfig": {
-                "temperature": 0.3,
-                "maxOutputTokens": 1024,
-            }
-        }
-
-        resp = requests.post(url, json=payload, timeout=12)
-        if resp.status_code == 200:
-            data = resp.json()
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts:
-                    return parts[0].get("text", "")
-        return None
+    # =========================================================================
+    # QUIZ GENERATION
+    # =========================================================================
 
     async def generate_quiz(self, user_id: str, req: QuizGenerateRequest) -> QuizGenerateResponse:
-        """Generate multiple choice practice quiz questions grounded in course chunks."""
-        search_query = req.topic or "concepts definitions algorithms key formulas"
+        """Generate multiple-choice practice quiz questions grounded in course chunks."""
+        search_query = req.topic or "concepts definitions algorithms key formulas properties"
         search_res = await self.ingestion_service.search_similar_chunks(
             user_id=user_id,
             search_query=SemanticSearchQuery(
@@ -211,72 +186,122 @@ class RagService:
             ),
         )
 
-        questions: List[QuizQuestionModel] = []
         chunks = search_res.results
+        context_str = "\n\n".join([f"[{c.source_name}]: {c.text_content}" for c in chunks[:6]])
 
+        if chunks:
+            system_instruction = (
+                "You are an expert university professor creating an assessment quiz. "
+                "Generate rigorous, high-quality multiple choice questions based on the provided course material. "
+                "Return a JSON array where each object has:\n"
+                "- 'question': string\n"
+                "- 'options': list of exactly 4 strings\n"
+                "- 'correct_option_index': integer (0, 1, 2, or 3)\n"
+                "- 'explanation': string explaining why the answer is correct\n"
+                "Only return the valid JSON array, without extra markdown or commentary."
+            )
+            prompt = (
+                f"Course Material:\n{context_str}\n\n"
+                f"Generate {req.num_questions} multiple-choice questions on topic: '{req.topic or 'General Course Topics'}'. "
+                f"Ensure options are plausible and one is undeniably correct."
+            )
+
+            json_data = self._call_llm_json(prompt, system_instruction)
+            if json_data and isinstance(json_data, list) and len(json_data) > 0:
+                questions: List[QuizQuestionModel] = []
+                for idx, q in enumerate(json_data[: req.num_questions]):
+                    if isinstance(q, dict) and "question" in q and "options" in q:
+                        opts = [str(o) for o in q.get("options", [])]
+                        if len(opts) >= 2:
+                            while len(opts) < 4:
+                                opts.append(f"None of the above option {len(opts) + 1}")
+                            corr_idx = int(q.get("correct_option_index", 0))
+                            if corr_idx < 0 or corr_idx >= len(opts):
+                                corr_idx = 0
+                            
+                            citation = None
+                            if idx < len(chunks):
+                                c = chunks[idx]
+                                citation = CitationItemModel(
+                                    chunk_id=c.chunk_id,
+                                    source_id=c.source_id,
+                                    source_name=c.source_name,
+                                    source_type=c.source_type,
+                                    subject_id=c.subject_id,
+                                    page_or_section=c.page_or_section,
+                                    snippet=c.text_content[:160] + "...",
+                                    similarity_score=c.similarity_score,
+                                )
+
+                            questions.append(
+                                QuizQuestionModel(
+                                    id=f"q_{idx + 1}_{uuid.uuid4().hex[:6]}",
+                                    question=str(q.get("question")),
+                                    options=opts[:4],
+                                    correct_option_index=corr_idx,
+                                    explanation=str(q.get("explanation", "Verified from course materials.")),
+                                    citation=citation,
+                                )
+                            )
+                if questions:
+                    return QuizGenerateResponse(
+                        title=f"Practice Quiz: {req.topic or 'Course Knowledge'}",
+                        subject_id=req.subject_id,
+                        questions=questions,
+                        total_questions=len(questions),
+                    )
+
+        # Dynamic fallback from chunks if LLM not responding or no API keys
+        questions = []
         if not chunks:
-            # Fallback starter question if no documents uploaded yet
             questions.append(
                 QuizQuestionModel(
                     id="q_fallback_1",
-                    question="Which algorithmic technique updates parameters in the direction of the negative gradient?",
+                    question="Which algorithmic technique updates model parameters in the direction of the negative gradient?",
                     options=[
                         "Gradient Descent",
                         "Depth First Search",
-                        "QuickSort",
-                        "Dijkstra's Algorithm"
+                        "QuickSort Algorithm",
+                        "Dijkstra Shortest Path"
                     ],
                     correct_option_index=0,
-                    explanation="Gradient descent updates weights iteratively in the opposite direction of the gradient of the loss function.",
+                    explanation="Gradient descent iteratively updates parameters in the opposite direction of the loss gradient.",
                 )
             )
-            return QuizGenerateResponse(
-                title=f"Practice Quiz: {req.topic or 'Course Knowledge'}",
-                subject_id=req.subject_id,
-                questions=questions,
-                total_questions=len(questions),
-            )
+        else:
+            for idx, chunk in enumerate(chunks[: req.num_questions]):
+                text = chunk.text_content
+                lines = [l.strip() for l in text.split("\n") if l.strip() and len(l.strip()) > 15]
+                first_sentence = lines[0] if lines else "Core Course Concept"
+                words = re.findall(r"\w+", first_sentence)
+                key_term = " ".join(words[:2]) if len(words) >= 2 else "Concept"
 
-        for idx, chunk in enumerate(chunks[: req.num_questions]):
-            text = chunk.text_content
-            lines = [l.strip() for l in text.split("\n") if l.strip() and len(l.strip()) > 15]
-
-            # Extract subject topic from text
-            first_sentence = lines[0] if lines else "Core Course Concept"
-            snippet_words = re.findall(r"\w+", first_sentence)
-            key_term = snippet_words[0] if snippet_words else "Concept"
-            if len(snippet_words) >= 2:
-                key_term = f"{snippet_words[0]} {snippet_words[1]}"
-
-            citation = CitationItemModel(
-                chunk_id=chunk.chunk_id,
-                source_id=chunk.source_id,
-                source_name=chunk.source_name,
-                source_type=chunk.source_type,
-                subject_id=chunk.subject_id,
-                page_or_section=chunk.page_or_section,
-                snippet=text[:160] + "...",
-                similarity_score=chunk.similarity_score,
-            )
-
-            q_text = f"According to '{chunk.source_name}', which statement accurately describes {key_term}?"
-            correct_opt = first_sentence[:120]
-            distractor_1 = f"It is an unrelated static structure not modified during {key_term} execution."
-            distractor_2 = f"It calculates quadratic polynomial interpolation without {key_term} constraints."
-            distractor_3 = f"It runs exclusively in constant O(1) space with zero parameter updates."
-
-            options = [correct_opt, distractor_1, distractor_2, distractor_3]
-
-            questions.append(
-                QuizQuestionModel(
-                    id=f"q_{idx + 1}_{uuid.uuid4().hex[:6]}",
-                    question=q_text,
-                    options=options,
-                    correct_option_index=0,
-                    explanation=f"Directly derived from {chunk.source_name} ({chunk.page_or_section or 'General'}): \"{text[:180]}\"",
-                    citation=citation,
+                citation = CitationItemModel(
+                    chunk_id=chunk.chunk_id,
+                    source_id=chunk.source_id,
+                    source_name=chunk.source_name,
+                    source_type=chunk.source_type,
+                    subject_id=chunk.subject_id,
+                    page_or_section=chunk.page_or_section,
+                    snippet=text[:160] + "...",
+                    similarity_score=chunk.similarity_score,
                 )
-            )
+
+                questions.append(
+                    QuizQuestionModel(
+                        id=f"q_{idx + 1}_{uuid.uuid4().hex[:6]}",
+                        question=f"According to '{chunk.source_name}', what is a primary characteristic of {key_term}?",
+                        options=[
+                            first_sentence[:120],
+                            f"It operates strictly as a static read-only cache without runtime updates.",
+                            f"It bypasses all algorithmic invariant constraints during execution.",
+                            f"It runs in O(1) constant auxiliary space with zero state transitions.",
+                        ],
+                        correct_option_index=0,
+                        explanation=f"Directly derived from {chunk.source_name}: \"{text[:160]}\"",
+                        citation=citation,
+                    )
+                )
 
         return QuizGenerateResponse(
             title=f"Practice Quiz: {req.topic or 'Course Knowledge'}",
@@ -285,9 +310,13 @@ class RagService:
             total_questions=len(questions),
         )
 
+    # =========================================================================
+    # FLASHCARD GENERATION
+    # =========================================================================
+
     async def generate_flashcards(self, user_id: str, req: FlashcardGenerateRequest) -> FlashcardGenerateResponse:
         """Generate structured flashcard study deck extracted from course chunks."""
-        search_query = req.topic or "definitions terms formulas core concepts"
+        search_query = req.topic or "definitions terms formulas core concepts methods"
         search_res = await self.ingestion_service.search_similar_chunks(
             user_id=user_id,
             search_query=SemanticSearchQuery(
@@ -297,9 +326,61 @@ class RagService:
             ),
         )
 
-        cards: List[FlashcardItemModel] = []
         chunks = search_res.results
+        context_str = "\n\n".join([f"[{c.source_name}]: {c.text_content}" for c in chunks[:6]])
 
+        if chunks:
+            system_instruction = (
+                "You are an academic flashcard creator. Generate high-yield, concise study flashcards from the provided material. "
+                "Return a JSON array where each object has:\n"
+                "- 'front': string (a concise term, formula name, or concept question)\n"
+                "- 'back': string (a clear, accurate definition or explanation)\n"
+                "- 'category': string (the sub-topic or theme)\n"
+                "Only return valid JSON array."
+            )
+            prompt = (
+                f"Course Material:\n{context_str}\n\n"
+                f"Generate {req.num_cards} flashcards for topic: '{req.topic or 'Core Concepts'}'. "
+                f"Focus on high-yield exam takeaways."
+            )
+
+            json_data = self._call_llm_json(prompt, system_instruction)
+            if json_data and isinstance(json_data, list) and len(json_data) > 0:
+                cards: List[FlashcardItemModel] = []
+                for idx, item in enumerate(json_data[: req.num_cards]):
+                    if isinstance(item, dict) and "front" in item and "back" in item:
+                        citation = None
+                        if idx < len(chunks):
+                            c = chunks[idx]
+                            citation = CitationItemModel(
+                                chunk_id=c.chunk_id,
+                                source_id=c.source_id,
+                                source_name=c.source_name,
+                                source_type=c.source_type,
+                                subject_id=c.subject_id,
+                                page_or_section=c.page_or_section,
+                                snippet=c.text_content[:160] + "...",
+                                similarity_score=c.similarity_score,
+                            )
+                        cards.append(
+                            FlashcardItemModel(
+                                id=f"fc_{idx + 1}_{uuid.uuid4().hex[:6]}",
+                                front=str(item.get("front")),
+                                back=str(item.get("back")),
+                                category=str(item.get("category", req.topic or "Core Concept")),
+                                citation=citation,
+                            )
+                        )
+                if cards:
+                    return FlashcardGenerateResponse(
+                        title=f"Flashcards: {req.topic or 'Core Concepts'}",
+                        subject_id=req.subject_id,
+                        cards=cards,
+                        total_cards=len(cards),
+                    )
+
+        # Fallback extraction
+        cards = []
         if not chunks:
             cards.append(
                 FlashcardItemModel(
@@ -309,44 +390,34 @@ class RagService:
                     category="Optimization",
                 )
             )
-            return FlashcardGenerateResponse(
-                title=f"Flashcards: {req.topic or 'Core Concepts'}",
-                subject_id=req.subject_id,
-                cards=cards,
-                total_cards=len(cards),
-            )
+        else:
+            for idx, chunk in enumerate(chunks[: req.num_cards]):
+                text = chunk.text_content
+                lines = [l.strip() for l in text.split("\n") if l.strip()]
+                front_text = chunk.page_or_section or f"Concept from {chunk.source_name}"
+                if lines and len(lines[0]) < 60:
+                    front_text = lines[0].replace("#", "").strip()
 
-        for idx, chunk in enumerate(chunks[: req.num_cards]):
-            text = chunk.text_content
-            lines = [l.strip() for l in text.split("\n") if l.strip()]
-
-            # Determine front & back
-            front_text = chunk.page_or_section or f"Concept from {chunk.source_name}"
-            if lines and len(lines[0]) < 60:
-                front_text = lines[0].replace("#", "").strip()
-
-            back_text = text[:280] + ("..." if len(text) > 280 else "")
-
-            citation = CitationItemModel(
-                chunk_id=chunk.chunk_id,
-                source_id=chunk.source_id,
-                source_name=chunk.source_name,
-                source_type=chunk.source_type,
-                subject_id=chunk.subject_id,
-                page_or_section=chunk.page_or_section,
-                snippet=text[:160] + "...",
-                similarity_score=chunk.similarity_score,
-            )
-
-            cards.append(
-                FlashcardItemModel(
-                    id=f"fc_{idx + 1}_{uuid.uuid4().hex[:6]}",
-                    front=front_text,
-                    back=back_text,
-                    category=chunk.source_name,
-                    citation=citation,
+                back_text = text[:280] + ("..." if len(text) > 280 else "")
+                citation = CitationItemModel(
+                    chunk_id=chunk.chunk_id,
+                    source_id=chunk.source_id,
+                    source_name=chunk.source_name,
+                    source_type=chunk.source_type,
+                    subject_id=chunk.subject_id,
+                    page_or_section=chunk.page_or_section,
+                    snippet=text[:160] + "...",
+                    similarity_score=chunk.similarity_score,
                 )
-            )
+                cards.append(
+                    FlashcardItemModel(
+                        id=f"fc_{idx + 1}_{uuid.uuid4().hex[:6]}",
+                        front=front_text,
+                        back=back_text,
+                        category=chunk.source_name,
+                        citation=citation,
+                    )
+                )
 
         return FlashcardGenerateResponse(
             title=f"Flashcards: {req.topic or 'Core Concepts'}",
@@ -355,9 +426,13 @@ class RagService:
             total_cards=len(cards),
         )
 
+    # =========================================================================
+    # EXAM SUMMARY GENERATION
+    # =========================================================================
+
     async def generate_summary(self, user_id: str, req: SummaryGenerateRequest) -> SummaryGenerateResponse:
         """Generate high-yield exam revision cheat sheet."""
-        search_query = req.topic or "overview summary formulas exam review"
+        search_query = req.topic or "overview summary formulas exam review concepts"
         search_res = await self.ingestion_service.search_similar_chunks(
             user_id=user_id,
             search_query=SemanticSearchQuery(
@@ -367,24 +442,54 @@ class RagService:
             ),
         )
 
-        citations: List[CitationItemModel] = []
-        key_concepts: List[str] = []
-        formulas: List[str] = []
-
-        for item in search_res.results:
-            citation = CitationItemModel(
-                chunk_id=item.chunk_id,
-                source_id=item.source_id,
-                source_name=item.source_name,
-                source_type=item.source_type,
-                subject_id=item.subject_id,
-                page_or_section=item.page_or_section,
-                snippet=item.text_content[:180] + "...",
-                similarity_score=item.similarity_score,
+        chunks = search_res.results
+        citations = [
+            CitationItemModel(
+                chunk_id=c.chunk_id,
+                source_id=c.source_id,
+                source_name=c.source_name,
+                source_type=c.source_type,
+                subject_id=c.subject_id,
+                page_or_section=c.page_or_section,
+                snippet=c.text_content[:180] + "...",
+                similarity_score=c.similarity_score,
             )
-            citations.append(citation)
+            for c in chunks
+        ]
 
-            # Extract concepts and formulas
+        context_str = "\n\n".join([f"[{c.source_name}]: {c.text_content}" for c in chunks[:6]])
+
+        if chunks:
+            system_instruction = (
+                "You are an academic exam prep specialist. Generate a concise, high-yield revision cheat sheet based on the course materials. "
+                "Return a JSON object with:\n"
+                "- 'overview': string (2-3 sentences summarizing the major theme)\n"
+                "- 'key_concepts': list of strings (4-6 core takeaways)\n"
+                "- 'important_formulas_or_takeaways': list of strings (key mathematical formulas or definitions)\n"
+                "- 'exam_tips': list of strings (3 actionable test-taking strategies)\n"
+                "Only return valid JSON object."
+            )
+            prompt = (
+                f"Course Material:\n{context_str}\n\n"
+                f"Generate a revision summary for topic: '{req.topic or 'High-Yield Exam Prep'}'."
+            )
+
+            json_data = self._call_llm_json(prompt, system_instruction)
+            if json_data and isinstance(json_data, dict):
+                return SummaryGenerateResponse(
+                    title=f"Revision Summary: {req.topic or 'High-Yield Exam Prep'}",
+                    subject_id=req.subject_id,
+                    overview=str(json_data.get("overview", "Comprehensive course review synthesized from indexed materials.")),
+                    key_concepts=[str(c) for c in json_data.get("key_concepts", [])] or ["Master the core algorithmic definitions."],
+                    important_formulas_or_takeaways=[str(f) for f in json_data.get("important_formulas_or_takeaways", [])] or ["Review foundational theorems."],
+                    exam_tips=[str(t) for t in json_data.get("exam_tips", [])] or ["Verify boundary conditions on assessments."],
+                    citations=citations,
+                )
+
+        # Fallback extraction
+        key_concepts = []
+        formulas = []
+        for item in chunks:
             sentences = [s.strip() for s in item.text_content.split(".") if len(s.strip()) > 20]
             if sentences:
                 key_concepts.append(f"{sentences[0]} [{item.source_name}]")
@@ -393,23 +498,259 @@ class RagService:
                     if any(sym in line for sym in ["=", "def ", "$$", "\\"]):
                         formulas.append(line.strip())
 
-        overview = (
-            f"Comprehensive syllabus synthesis compiled from {len(citations)} indexed source materials. "
-            f"Focus on algorithmic foundations, mathematical formulations, and critical exam definitions."
-        )
-
-        exam_tips = [
-            "Be prepared to write iterative equations and state time/space complexities on assessments.",
-            "Verify all preconditions and edge cases before applying optimization theorems.",
-            "Review connected lecture slides and completed assignment homework problems.",
-        ]
-
         return SummaryGenerateResponse(
             title=f"Revision Summary: {req.topic or 'High-Yield Exam Prep'}",
             subject_id=req.subject_id,
-            overview=overview,
+            overview=f"Comprehensive syllabus synthesis compiled from {len(citations)} indexed source materials.",
             key_concepts=key_concepts[:6] or ["Master the core algorithmic definitions and proof properties."],
             important_formulas_or_takeaways=formulas[:4] or ["Loss update: theta = theta - alpha * gradient(J(theta))"],
-            exam_tips=exam_tips,
+            exam_tips=[
+                "Be prepared to write iterative equations and state time/space complexities on assessments.",
+                "Verify all preconditions and edge cases before applying optimization theorems.",
+                "Review connected lecture slides and completed assignment homework problems.",
+            ],
             citations=citations,
         )
+
+    # =========================================================================
+    # LOW-LEVEL LLM CLIENT HELPERS (GROQ ROUND-ROBIN, GEMINI & HUGGING FACE)
+    # =========================================================================
+
+    def _call_llm_text(
+        self,
+        prompt: str,
+        system_instruction: str,
+        history: Optional[List[ChatMessageModel]] = None,
+    ) -> Optional[str]:
+        """Dispatch text generation: Groq (Round-Robin) -> Gemini -> Hugging Face."""
+        # 1. Try Groq with Round-Robin key rotation if configured
+        if self.groq_keys:
+            try:
+                ans = self._call_groq_chat(prompt, system_instruction, history=history, json_mode=False)
+                if ans:
+                    return ans
+            except Exception as e:
+                logger.warning(f"Groq Round-Robin call failed: {e}")
+
+        # 2. Try Gemini API if configured
+        if self.gemini_api_key:
+            try:
+                ans = self._call_gemini_generate(prompt, system_instruction, history=history)
+                if ans:
+                    return ans
+            except Exception as e:
+                logger.warning(f"Gemini API call failed: {e}")
+
+        # 3. Try Hugging Face Chat API if configured
+        if self.hf_api_key:
+            try:
+                ans = self._call_hf_chat(prompt, system_instruction, history=history)
+                if ans:
+                    return ans
+            except Exception as e:
+                logger.warning(f"Hugging Face API call failed: {e}")
+
+        return None
+
+    def _call_llm_json(
+        self,
+        prompt: str,
+        system_instruction: str,
+    ) -> Optional[Any]:
+        """Dispatch JSON generation: Groq (Round-Robin) -> Gemini -> Hugging Face."""
+        # 1. Try Groq JSON mode with Round-Robin key rotation
+        if self.groq_keys:
+            try:
+                raw_reply = self._call_groq_chat(prompt, system_instruction, json_mode=True)
+                if raw_reply:
+                    cleaned = re.sub(r"^```(json)?", "", raw_reply.strip(), flags=re.MULTILINE)
+                    cleaned = re.sub(r"```$", "", cleaned.strip(), flags=re.MULTILINE)
+                    match = re.search(r"(\[.*\]|\{.*\})", cleaned, re.DOTALL)
+                    if match:
+                        return json.loads(match.group(1))
+                    return json.loads(raw_reply)
+            except Exception as e:
+                logger.warning(f"Groq JSON generation failed: {e}")
+
+        # 2. Try Gemini with JSON response schema
+        if self.gemini_api_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_api_key}"
+                payload = {
+                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                    "systemInstruction": {"parts": [{"text": system_instruction}]},
+                    "generationConfig": {
+                        "responseMimeType": "application/json",
+                        "temperature": 0.2,
+                        "maxOutputTokens": 2048,
+                    },
+                }
+                resp = requests.post(url, json=payload, timeout=15)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            raw_text = parts[0].get("text", "")
+                            return json.loads(raw_text)
+            except Exception as e:
+                logger.warning(f"Gemini JSON generation failed: {e}")
+
+        # 3. Try HF Chat
+        if self.hf_api_key:
+            try:
+                raw_reply = self._call_hf_chat(prompt, system_instruction)
+                if raw_reply:
+                    cleaned = re.sub(r"^```(json)?", "", raw_reply.strip(), flags=re.MULTILINE)
+                    cleaned = re.sub(r"```$", "", cleaned.strip(), flags=re.MULTILINE)
+                    match = re.search(r"(\[.*\]|\{.*\})", cleaned, re.DOTALL)
+                    if match:
+                        return json.loads(match.group(1))
+            except Exception as e:
+                logger.warning(f"HF JSON parse failed: {e}")
+
+        return None
+
+    def _call_groq_chat(
+        self,
+        prompt: str,
+        system_instruction: str,
+        history: Optional[List[ChatMessageModel]] = None,
+        json_mode: bool = False,
+    ) -> Optional[str]:
+        """Call Groq API using round-robin key rotation and automatic failover across keys."""
+        if not self.groq_keys:
+            return None
+
+        messages = [{"role": "system", "content": system_instruction}]
+        if history:
+            for h in history[-4:]:
+                messages.append({"role": h.role, "content": h.content})
+        messages.append({"role": "user", "content": prompt})
+
+        payload: Dict[str, Any] = {
+            "model": self.groq_model,
+            "messages": messages,
+            "temperature": 0.2,
+            "max_tokens": 2048,
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        num_keys = len(self.groq_keys)
+        # Try each key in the pool in round-robin order
+        for attempt in range(num_keys):
+            idx = (RagService._groq_index + attempt) % num_keys
+            api_key = self.groq_keys[idx]
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+            try:
+                resp = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    choices = data.get("choices", [])
+                    if choices:
+                        content = choices[0].get("message", {}).get("content", "")
+                        if content and len(content.strip()) > 0:
+                            # Successfully used key, advance round-robin index for next call
+                            RagService._groq_index = (idx + 1) % num_keys
+                            return content.strip()
+                elif resp.status_code in (429, 401, 503):
+                    logger.warning(
+                        f"Groq API key #{idx + 1} returned HTTP {resp.status_code}, rotating to next key in pool..."
+                    )
+                    continue
+                else:
+                    logger.warning(f"Groq API error (status {resp.status_code}): {resp.text[:200]}")
+            except Exception as e:
+                logger.warning(f"Groq API request with key #{idx + 1} failed: {e}")
+                continue
+
+        return None
+
+    def _call_gemini_generate(
+        self,
+        prompt: str,
+        system_instruction: str,
+        history: Optional[List[ChatMessageModel]] = None,
+    ) -> Optional[str]:
+        """Call Google Gemini 1.5 Flash content generation."""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_api_key}"
+        contents = []
+        if history:
+            for h in history[-4:]:
+                contents.append({
+                    "role": "user" if h.role == "user" else "model",
+                    "parts": [{"text": h.content}],
+                })
+        contents.append({"role": "user", "parts": [{"text": prompt}]})
+
+        payload = {
+            "contents": contents,
+            "systemInstruction": {"parts": [{"text": system_instruction}]},
+            "generationConfig": {
+                "temperature": 0.3,
+                "maxOutputTokens": 1500,
+            },
+        }
+        resp = requests.post(url, json=payload, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts:
+                    return parts[0].get("text", "")
+        return None
+
+    def _call_hf_chat(
+        self,
+        prompt: str,
+        system_instruction: str,
+        history: Optional[List[ChatMessageModel]] = None,
+    ) -> Optional[str]:
+        """Send prompt to Hugging Face Router or standard endpoint."""
+        messages = [{"role": "system", "content": system_instruction}]
+        if history:
+            for h in history[-4:]:
+                messages.append({"role": h.role, "content": h.content})
+        messages.append({"role": "user", "content": prompt})
+
+        endpoints = [
+            "https://router.huggingface.co/hf-inference/v1/chat/completions",
+            "https://api-inference.huggingface.co/v1/chat/completions",
+        ]
+
+        headers = {
+            "Authorization": f"Bearer {self.hf_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        for ep in endpoints:
+            try:
+                payload = {
+                    "model": self.hf_chat_model,
+                    "messages": messages,
+                    "max_tokens": 1024,
+                    "temperature": 0.3,
+                }
+                resp = requests.post(ep, headers=headers, json=payload, timeout=12)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    choices = data.get("choices", [])
+                    if choices:
+                        content = choices[0].get("message", {}).get("content", "")
+                        if content and len(content.strip()) > 5:
+                            return content.strip()
+            except Exception:
+                pass
+
+        return None

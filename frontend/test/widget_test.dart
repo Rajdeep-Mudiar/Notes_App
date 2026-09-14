@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/theme/app_colors.dart';
 import 'package:frontend/features/assignments/models/assignment_model.dart';
+import 'package:frontend/features/auth/models/auth_state.dart';
 import 'package:frontend/features/auth/models/user_model.dart';
 import 'package:frontend/features/exams/models/exam_model.dart';
 import 'package:frontend/features/files/models/file_model.dart';
@@ -964,6 +965,49 @@ void main() {
   test('AppColors brand identity check', () {
     expect(AppColors.primary.toARGB32(), isNotNull);
     expect(AppColors.success.toARGB32(), isNotNull);
+  });
+
+  test('UserModel update and serialization test', () {
+    final original = UserModel(
+      id: 'usr_789',
+      email: 'alex.rivera@stanford.edu',
+      fullName: 'Alex Rivera',
+      university: 'Stanford University',
+      degree: 'B.S. Computer Science',
+      currentSemester: 4,
+    );
+
+    final updated = original.copyWith(
+      fullName: 'Alex Rivera, MSc',
+      university: 'MIT',
+      currentSemester: 5,
+    );
+
+    expect(updated.id, 'usr_789');
+    expect(updated.fullName, 'Alex Rivera, MSc');
+    expect(updated.university, 'MIT');
+    expect(updated.currentSemester, 5);
+    expect(updated.degree, 'B.S. Computer Science');
+  });
+
+  test('AuthState unauthenticated and authenticated transitions test', () {
+    final unauth = AuthState.unauthenticated();
+    expect(unauth.isAuthenticated, false);
+    expect(unauth.isInitial, false);
+    expect(unauth.user, isNull);
+
+    final user = UserModel(
+      id: 'u1',
+      email: 'newstudent@university.edu',
+      fullName: 'New Student',
+      university: 'Harvard',
+      degree: 'B.A. Economics',
+      currentSemester: 1,
+    );
+    final auth = AuthState.authenticated(user);
+    expect(auth.isAuthenticated, true);
+    expect(auth.user?.fullName, 'New Student');
+    expect(auth.user?.email, 'newstudent@university.edu');
   });
 }
 

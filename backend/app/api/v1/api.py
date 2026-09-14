@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, users, subjects, notes, files, assignments, exams, timetable, analytics, notifications, ingestion, ai
+from app.api.v1 import auth, users, subjects, notes, files, assignments, exams, timetable, analytics, notifications, ingestion, ai, system
 from app.core.database import db_manager
 from app.schemas.response import ApiResponse
 
@@ -17,6 +17,7 @@ api_router.include_router(analytics.router)
 api_router.include_router(notifications.router)
 api_router.include_router(ingestion.router)
 api_router.include_router(ai.router)
+api_router.include_router(system.router)
 
 
 

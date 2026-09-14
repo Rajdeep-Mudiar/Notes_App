@@ -1,5 +1,5 @@
 import json
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,6 +26,19 @@ class Settings(BaseSettings):
     # Server
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+
+    # AI & LLM Inference Configuration
+    GROQ_API_KEYS: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    HUGGINGFACE_API_KEY: Optional[str] = None
+    HUGGINGFACE_CHAT_MODEL: str = "meta-llama/Llama-3.2-3B-Instruct"
+    HUGGINGFACE_EMBEDDING_MODEL: str = "sentence-transformers/all-mpnet-base-v2"
+    GEMINI_API_KEY: Optional[str] = None
+
+    # Google OAuth Authentication
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

@@ -13,8 +13,15 @@ class EmbeddingService:
 
     EMBEDDING_DIMENSION = 768
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        hf_api_key: Optional[str] = None,
+        hf_model: str = "sentence-transformers/all-mpnet-base-v2",
+    ):
         self.api_key = api_key
+        self.hf_api_key = hf_api_key
+        self.hf_model = hf_model or "sentence-transformers/all-mpnet-base-v2"
 
     def generate_embedding(self, text: str) -> List[float]:
         """Generate a 768-dimensional normalized embedding vector for a single text."""
@@ -22,7 +29,16 @@ class EmbeddingService:
             # Return zero vector if text is empty
             return [0.0] * self.EMBEDDING_DIMENSION
 
-        # Attempt Gemini API embedding if API key is provided
+        # 1. Attempt Hugging Face Inference API if token is provided
+        if self.hf_api_key:
+            try:
+                emb = self._generate_hf_embedding(text)
+                if emb and len(emb) == self.EMBEDDING_DIMENSION:
+                    return emb
+            except Exception as e:
+                logger.warning(f"Hugging Face embedding generation failed, falling back: {e}")
+
+        # 2. Attempt Gemini API embedding if API key is provided
         if self.api_key:
             try:
                 emb = self._generate_gemini_embedding(text)
@@ -31,6 +47,7 @@ class EmbeddingService:
             except Exception as e:
                 logger.warning(f"Gemini API embedding generation failed, falling back to local dense vector: {e}")
 
+        # 3. Fallback: Local deterministic dense projection (100% offline & fast)
         return self._generate_deterministic_dense_vector(text)
 
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
@@ -84,6 +101,43 @@ class EmbeddingService:
             vec = vec / norm
 
         return vec.tolist()
+
+    def _generate_hf_embedding(self, text: str) -> Optional[List[float]]:
+        """Generate embedding using Hugging Face Free Serverless Inference API."""
+        import requests
+
+        url = f"https://api-inference.huggingface.co/models/{self.hf_model}"
+        headers = {"Authorization": f"Bearer {self.hf_api_key}"}
+        payload = {"inputs": text[:2048], "options": {"wait_for_model": True}}
+
+        resp = requests.post(url, headers=headers, json=payload, timeout=12)
+        if resp.status_code == 200:
+            data = resp.json()
+            # HF embedding endpoints usually return List[float] or List[List[float]]
+            if isinstance(data, list):
+                if data and isinstance(data[0], list):
+                    raw_vec = data[0]
+                else:
+                    raw_vec = data
+
+                if raw_vec and isinstance(raw_vec[0], (int, float)):
+                    vec = np.array(raw_vec, dtype=np.float32)
+                    # If dimension matches exactly 768
+                    if len(vec) == self.EMBEDDING_DIMENSION:
+                        norm = np.linalg.norm(vec)
+                        if norm > 0:
+                            vec = vec / norm
+                        return vec.tolist()
+                    elif len(vec) > 0:
+                        # Pad or truncate to 768 dimensions for uniform vector schema
+                        padded = np.zeros(self.EMBEDDING_DIMENSION, dtype=np.float32)
+                        copy_len = min(len(vec), self.EMBEDDING_DIMENSION)
+                        padded[:copy_len] = vec[:copy_len]
+                        norm = np.linalg.norm(padded)
+                        if norm > 0:
+                            padded = padded / norm
+                        return padded.tolist()
+        return None
 
     def _generate_gemini_embedding(self, text: str) -> Optional[List[float]]:
         """Generate embedding using Google Gemini API."""

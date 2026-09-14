@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
 from app.schemas.user import UserProfileResponse
 
 
@@ -11,6 +12,15 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., min_length=1)
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: Optional[str] = None
+    server_auth_code: Optional[str] = None
+    access_token: Optional[str] = None
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
 class AuthData(BaseModel):
