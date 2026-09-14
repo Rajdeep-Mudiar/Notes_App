@@ -82,7 +82,13 @@ async def _create_indexes():
         await assignments_collection.create_index([("user_id", 1), ("priority", 1)])
         await assignments_collection.create_index("created_at")
 
-        logger.info("MongoDB indexes for users, subjects, notes, files, and assignments verified successfully.")
+        exams_collection = db_manager.db["exams"]
+        await exams_collection.create_index([("user_id", 1), ("subject_id", 1)])
+        await exams_collection.create_index([("user_id", 1), ("date_time", 1)])
+        await exams_collection.create_index([("user_id", 1), ("exam_type", 1)])
+        await exams_collection.create_index("created_at")
+
+        logger.info("MongoDB indexes for users, subjects, notes, files, assignments, and exams verified successfully.")
     except Exception as e:
         logger.warning(f"Error creating indexes: {e}")
 

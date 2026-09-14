@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/theme/app_colors.dart';
 import 'package:frontend/features/assignments/models/assignment_model.dart';
 import 'package:frontend/features/auth/models/user_model.dart';
+import 'package:frontend/features/exams/models/exam_model.dart';
 import 'package:frontend/features/files/models/file_model.dart';
 import 'package:frontend/features/notes/models/note_model.dart';
 import 'package:frontend/features/subjects/models/subject_model.dart';
@@ -268,6 +269,111 @@ void main() {
     expect(summary.inProgressCount, 3);
     expect(summary.overdueCount, 1);
     expect(summary.dueThisWeekCount, 2);
+  });
+
+  test('ExamModel, ExamTypeEnum, and Study Calendar serialization test', () {
+    final exam = ExamModel(
+      id: 'exam_201',
+      userId: 'user_123',
+      subjectId: 'sub_123',
+      subjectCode: 'CS301',
+      subjectName: 'Operating Systems',
+      subjectColor: '#3B82F6',
+      title: 'Operating Systems Midterm Exam',
+      examType: ExamTypeEnum.midterm,
+      dateTime: DateTime.parse('2026-10-15T09:00:00Z'),
+      durationMinutes: 120,
+      location: 'Turing Hall A',
+      seatNumber: 'B-14',
+      syllabusTopics: ['Virtual Memory', 'Page Tables', 'Deadlocks', 'Semaphores'],
+      weightPercentage: 30.0,
+      targetGrade: 90.0,
+      actualGrade: 94.5,
+      notes: 'Bring non-programmable calculator.',
+      isCompleted: false,
+      countdownText: 'In 30 days',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    expect(exam.examType, ExamTypeEnum.midterm);
+    expect(exam.examType.label, 'Midterm Exam');
+    expect(exam.examType.value, 'midterm');
+    expect(exam.examType.color.toARGB32(), isNotNull);
+    expect(exam.examType.icon, isNotNull);
+    expect(exam.formattedDuration, '2 hrs');
+
+    final json = exam.toJson();
+    expect(json['title'], 'Operating Systems Midterm Exam');
+    expect(json['exam_type'], 'midterm');
+    expect(json['duration_minutes'], 120);
+    expect(json['location'], 'Turing Hall A');
+    expect(json['seat_number'], 'B-14');
+    expect(json['weight_percentage'], 30.0);
+    expect(json['target_grade'], 90.0);
+    expect(json['actual_grade'], 94.5);
+
+    final reconstructed = ExamModel.fromJson({
+      ...json,
+      'subject_code': 'CS301',
+      'subject_name': 'Operating Systems',
+      'subject_color': '#3B82F6',
+      'is_completed': false,
+      'countdown_text': 'In 30 days',
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+
+    expect(reconstructed.id, 'exam_201');
+    expect(reconstructed.syllabusTopics.length, 4);
+    expect(reconstructed.countdownText, 'In 30 days');
+
+    final examListResp = ExamListResponseModel.fromJson({
+      'items': [reconstructed.toJson()],
+      'total': 1,
+      'upcoming_count': 1,
+      'completed_count': 0,
+    });
+    expect(examListResp.total, 1);
+    expect(examListResp.upcomingCount, 1);
+
+    final calendarEvent = CalendarEventItemModel.fromJson({
+      'id': 'exam_201',
+      'type': 'exam',
+      'title': 'Operating Systems Midterm Exam',
+      'date_time': '2026-10-15T09:00:00Z',
+      'subject_code': 'CS301',
+      'subject_name': 'Operating Systems',
+      'subject_color': '#3B82F6',
+      'priority_or_type': 'midterm',
+      'is_completed': false,
+      'location_or_desc': 'Turing Hall A (Seat: B-14)',
+    });
+    expect(calendarEvent.isExam, true);
+    expect(calendarEvent.isAssignment, false);
+    expect(calendarEvent.locationOrDesc, 'Turing Hall A (Seat: B-14)');
+
+    final calendarResp = ExamCalendarResponseModel.fromJson({
+      'start_date': '2026-10-01T00:00:00Z',
+      'end_date': '2026-10-31T23:59:59Z',
+      'events': [
+        {
+          'id': 'exam_201',
+          'type': 'exam',
+          'title': 'Operating Systems Midterm Exam',
+          'date_time': '2026-10-15T09:00:00Z',
+          'subject_code': 'CS301',
+          'subject_name': 'Operating Systems',
+          'subject_color': '#3B82F6',
+          'priority_or_type': 'midterm',
+          'is_completed': false,
+          'location_or_desc': 'Turing Hall A (Seat: B-14)',
+        }
+      ],
+      'total_events': 1,
+    });
+    expect(calendarResp.totalEvents, 1);
+    expect(calendarResp.events.first.title, 'Operating Systems Midterm Exam');
   });
 
   test('AppColors brand identity check', () {
