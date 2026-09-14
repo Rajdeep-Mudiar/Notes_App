@@ -45,7 +45,7 @@ jobs:
       - name: Build Android Release APK
         run: |
           cd frontend
-          flutter build apk --release
+          flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Generate Version & Tag
         id: tag_gen
