@@ -45,7 +45,7 @@ jobs:
       - name: Build Android Release APK
         run: |
           cd frontend
-          flutter build apk --release --android-skip-build-dependency-validation
+          flutter build apk --release --android-skip-build-dependency-validation --dart-define=API_BASE_URL=https://notes-app-f0ae.onrender.com
 
       - name: Generate Version & Tag
         id: tag_gen

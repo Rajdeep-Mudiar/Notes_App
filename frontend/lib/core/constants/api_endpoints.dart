@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
-
 class ApiEndpoints {
-  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const String defaultProductionUrl = 'https://notes-app-f0ae.onrender.com';
+  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: defaultProductionUrl);
   static String? _dynamicBaseUrl;
 
   static void setCustomBaseUrl(String? url) {
@@ -17,15 +16,7 @@ class ApiEndpoints {
       final clean = _envBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
       return clean.endsWith('/api/v1') ? clean : '$clean/api/v1';
     }
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000/api/v1';
-    }
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'http://10.0.2.2:8000/api/v1';
-      default:
-        return 'http://127.0.0.1:8000/api/v1';
-    }
+    return '$defaultProductionUrl/api/v1';
   }
 
   // Auth endpoints
