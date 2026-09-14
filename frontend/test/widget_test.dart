@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/theme/app_colors.dart';
+import 'package:frontend/features/assignments/models/assignment_model.dart';
 import 'package:frontend/features/auth/models/user_model.dart';
 import 'package:frontend/features/files/models/file_model.dart';
 import 'package:frontend/features/notes/models/note_model.dart';
@@ -198,6 +199,75 @@ void main() {
     expect(storage.usedBytes, 2048576);
     expect(storage.filesCount, 1);
     expect(storage.byType['pdf'], 2048576);
+  });
+
+  test('AssignmentModel, Enums, and Planner Summary serialization test', () {
+    final assignment = AssignmentModel(
+      id: 'asgn_101',
+      userId: 'user_123',
+      subjectId: 'sub_123',
+      subjectCode: 'CS301',
+      subjectName: 'Operating Systems',
+      subjectColor: '#3B82F6',
+      title: 'Memory Allocator Lab',
+      description: 'Implement buddy allocator with slab caching in C.',
+      dueDate: DateTime.parse('2026-09-20T23:59:59Z'),
+      priority: AssignmentPriority.urgent,
+      status: AssignmentStatus.inProgress,
+      weightPercentage: 25.0,
+      gradeReceived: 95.0,
+      feedback: 'Excellent test coverage.',
+      fileIds: ['f1', 'f2'],
+      isOverdue: false,
+      countdownText: 'Due in 6 days',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    expect(assignment.priority, AssignmentPriority.urgent);
+    expect(assignment.priority.label, 'Urgent');
+    expect(assignment.priority.color.toARGB32(), isNotNull);
+    expect(assignment.status, AssignmentStatus.inProgress);
+    expect(assignment.status.label, 'In Progress');
+    expect(assignment.isCompleted, false);
+
+    final json = assignment.toJson();
+    expect(json['title'], 'Memory Allocator Lab');
+    expect(json['priority'], 'urgent');
+    expect(json['status'], 'in_progress');
+    expect(json['weight_percentage'], 25.0);
+
+    final reconstructed = AssignmentModel.fromJson({
+      ...json,
+      'subject_code': 'CS301',
+      'subject_name': 'Operating Systems',
+      'subject_color': '#3B82F6',
+      'is_overdue': false,
+      'countdown_text': 'Due in 6 days',
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+
+    expect(reconstructed.id, 'asgn_101');
+    expect(reconstructed.subjectCode, 'CS301');
+    expect(reconstructed.priority, AssignmentPriority.urgent);
+    expect(reconstructed.countdownText, 'Due in 6 days');
+
+    final summary = AssignmentSummaryModel.fromJson({
+      'total_assignments': 12,
+      'pending_count': 4,
+      'in_progress_count': 3,
+      'submitted_count': 3,
+      'graded_count': 2,
+      'overdue_count': 1,
+      'due_this_week_count': 2,
+    });
+
+    expect(summary.totalAssignments, 12);
+    expect(summary.pendingCount, 4);
+    expect(summary.inProgressCount, 3);
+    expect(summary.overdueCount, 1);
+    expect(summary.dueThisWeekCount, 2);
   });
 
   test('AppColors brand identity check', () {

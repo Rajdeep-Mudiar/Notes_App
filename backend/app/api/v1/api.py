@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, users, subjects, notes, files
+from app.api.v1 import auth, users, subjects, notes, files, assignments
 from app.core.database import db_manager
 from app.schemas.response import ApiResponse
 
@@ -10,6 +10,7 @@ api_router.include_router(users.router)
 api_router.include_router(subjects.router)
 api_router.include_router(notes.router)
 api_router.include_router(files.router)
+api_router.include_router(assignments.router)
 
 
 @api_router.get("/health", response_model=ApiResponse[dict], tags=["Health"])

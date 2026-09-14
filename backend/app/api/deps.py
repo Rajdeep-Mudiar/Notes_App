@@ -8,10 +8,12 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.subject_repository import SubjectRepository
 from app.repositories.note_repository import NoteRepository
 from app.repositories.file_repository import FileRepository
+from app.repositories.assignment_repository import AssignmentRepository
 from app.services.auth_service import AuthService
 from app.services.subject_service import SubjectService
 from app.services.note_service import NoteService
 from app.services.file_service import FileService
+from app.services.assignment_service import AssignmentService
 from app.schemas.user import UserProfileResponse
 
 bearer_scheme = HTTPBearer(auto_error=True)
@@ -31,6 +33,10 @@ def get_note_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> Not
 
 def get_file_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> FileRepository:
     return FileRepository(db)
+
+
+def get_assignment_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> AssignmentRepository:
+    return AssignmentRepository(db)
 
 
 def get_auth_service(user_repo: UserRepository = Depends(get_user_repository)) -> AuthService:
@@ -56,6 +62,13 @@ def get_file_service(
     subject_repo: SubjectRepository = Depends(get_subject_repository)
 ) -> FileService:
     return FileService(file_repo, subject_repo)
+
+
+def get_assignment_service(
+    assignment_repo: AssignmentRepository = Depends(get_assignment_repository),
+    subject_repo: SubjectRepository = Depends(get_subject_repository)
+) -> AssignmentService:
+    return AssignmentService(assignment_repo, subject_repo)
 
 
 async def get_current_user(
