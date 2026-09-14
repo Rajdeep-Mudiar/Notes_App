@@ -1,4 +1,8 @@
-# Web Framework & ASGI Server
+# ==============================================================================
+# Student OS - Backend Dependencies (Python 3.10+)
+# ==============================================================================
+
+# Core Web Framework & ASGI Server
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 python-multipart>=0.0.12
@@ -7,7 +11,7 @@ python-multipart>=0.0.12
 motor>=3.6.0
 pymongo>=4.9.0
 
-# Data Validation & Settings
+# Data Validation & Configuration
 pydantic>=2.9.0
 pydantic-settings>=2.5.0
 email-validator>=2.2.0
@@ -17,14 +21,18 @@ pyjwt>=2.9.0
 bcrypt>=4.2.0
 python-dotenv>=1.0.1
 
-# HTTP Clients & Testing
+# HTTP Clients & Communication
 requests>=2.32.0
 httpx>=0.27.0
 
-# Document Ingestion & Multi-Format Parsing
+# Document Ingestion & Parsing (PDF, DOCX, PPTX)
 pypdf>=5.0.0
 python-docx>=1.1.0
 python-pptx>=1.0.0
 
-# Vector Embeddings & Numerical Operations
+# Vector Embeddings & Math Computations
 numpy>=1.26.0
+
+# Testing & Quality Assurance
+pytest>=8.0.0
+pytest-asyncio>=0.24.0

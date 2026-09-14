@@ -30,6 +30,10 @@ async def connect_to_mongo():
 
         # Create indexes
         await _create_indexes()
+
+        # Seed initial sample student & workspace data if empty
+        from app.core.seed import seed_initial_data
+        await seed_initial_data(db_manager.db)
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
         raise e
