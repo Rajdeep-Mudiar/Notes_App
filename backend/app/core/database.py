@@ -1,0 +1,75 @@
+import logging
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class DatabaseManager:
+    client: AsyncIOMotorClient = None
+    db: AsyncIOMotorDatabase = None
+
+
+db_manager = DatabaseManager()
+
+
+async def connect_to_mongo():
+    """Initialize MongoDB connection pool and create essential indexes."""
+    logger.info(f"Connecting to MongoDB at {settings.MONGODB_URL}...")
+    try:
+        db_manager.client = AsyncIOMotorClient(
+            settings.MONGODB_URL,
+            serverSelectionTimeoutMS=5000,
+            maxPoolSize=50,
+            minPoolSize=10
+        )
+        db_manager.db = db_manager.client[settings.DATABASE_NAME]
+        # Ping the server to verify connectivity
+        await db_manager.client.admin.command("ping")
+        logger.info(f"Connected to MongoDB database: {settings.DATABASE_NAME}")
+
+        # Create indexes
+        await _create_indexes()
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        raise e
+
+
+async def close_mongo_connection():
+    """Close MongoDB connection pool."""
+    if db_manager.client:
+        logger.info("Closing MongoDB connection pool...")
+        db_manager.client.close()
+        logger.info("MongoDB connection closed.")
+
+
+async def _create_indexes():
+    """Ensure indexes for users, subjects, notes, and workspace collections."""
+    try:
+        users_collection = db_manager.db["users"]
+        await users_collection.create_index("email", unique=True)
+        await users_collection.create_index("created_at")
+
+        subjects_collection = db_manager.db["subjects"]
+        await subjects_collection.create_index([("user_id", 1), ("semester", 1)])
+        await subjects_collection.create_index([("user_id", 1), ("code", 1)])
+        await subjects_collection.create_index("is_archived")
+        await subjects_collection.create_index("created_at")
+
+        notes_collection = db_manager.db["notes"]
+        await notes_collection.create_index([("user_id", 1), ("subject_id", 1)])
+        await notes_collection.create_index([("user_id", 1), ("tags", 1)])
+        await notes_collection.create_index([("user_id", 1), ("is_favorite", 1)])
+        await notes_collection.create_index([("user_id", 1), ("is_pinned", 1)])
+        await notes_collection.create_index("updated_at")
+
+        logger.info("MongoDB indexes for users, subjects, and notes verified successfully.")
+    except Exception as e:
+        logger.warning(f"Error creating indexes: {e}")
+
+
+def get_database() -> AsyncIOMotorDatabase:
+    """Dependency/helper to retrieve the database instance."""
+    if db_manager.db is None:
+        raise RuntimeError("Database connection has not been initialized.")
+    return db_manager.db
