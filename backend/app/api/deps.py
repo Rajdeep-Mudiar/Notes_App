@@ -7,9 +7,11 @@ from app.core.security import decode_token
 from app.repositories.user_repository import UserRepository
 from app.repositories.subject_repository import SubjectRepository
 from app.repositories.note_repository import NoteRepository
+from app.repositories.file_repository import FileRepository
 from app.services.auth_service import AuthService
 from app.services.subject_service import SubjectService
 from app.services.note_service import NoteService
+from app.services.file_service import FileService
 from app.schemas.user import UserProfileResponse
 
 bearer_scheme = HTTPBearer(auto_error=True)
@@ -25,6 +27,10 @@ def get_subject_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> 
 
 def get_note_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> NoteRepository:
     return NoteRepository(db)
+
+
+def get_file_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> FileRepository:
+    return FileRepository(db)
 
 
 def get_auth_service(user_repo: UserRepository = Depends(get_user_repository)) -> AuthService:
@@ -43,6 +49,13 @@ def get_note_service(
     subject_repo: SubjectRepository = Depends(get_subject_repository)
 ) -> NoteService:
     return NoteService(note_repo, subject_repo)
+
+
+def get_file_service(
+    file_repo: FileRepository = Depends(get_file_repository),
+    subject_repo: SubjectRepository = Depends(get_subject_repository)
+) -> FileService:
+    return FileService(file_repo, subject_repo)
 
 
 async def get_current_user(

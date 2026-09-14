@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/theme/app_colors.dart';
 import 'package:frontend/features/auth/models/user_model.dart';
+import 'package:frontend/features/files/models/file_model.dart';
 import 'package:frontend/features/notes/models/note_model.dart';
 import 'package:frontend/features/subjects/models/subject_model.dart';
 
@@ -138,6 +139,65 @@ void main() {
     expect(reconstructed.blocks[0].type, BlockType.heading1);
     expect(reconstructed.blocks[1].properties['language'], 'python');
     expect(reconstructed.isPinned, true);
+  });
+
+  test('FileModel, FolderModel, and StorageSummaryModel serialization test', () {
+    final folder = FolderModel(
+      id: 'folder_01',
+      userId: 'user_123',
+      name: 'Lecture Slides',
+      subjectId: 'sub_123',
+      colorHex: '#10B981',
+      itemsCount: 3,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final folderJson = folder.toJson();
+    expect(folderJson['name'], 'Lecture Slides');
+    expect(folderJson['subject_id'], 'sub_123');
+    expect(folder.color.toARGB32(), isNotNull);
+
+    final file = FileModel(
+      id: 'file_01',
+      userId: 'user_123',
+      subjectId: 'sub_123',
+      folderId: 'folder_01',
+      filename: 'uuid123_lecture1.pdf',
+      originalName: 'Lecture01_Intro.pdf',
+      fileType: FileTypeEnum.pdf,
+      mimeType: 'application/pdf',
+      sizeBytes: 2048576,
+      sizeFormatted: '2.0 MB',
+      downloadUrl: '/api/v1/files/file_01/download',
+      isFavorite: true,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    expect(file.fileExtension, 'PDF');
+    expect(file.fileType.label, 'PDF');
+    expect(file.fileType.color.toARGB32(), isNotNull);
+
+    final fileJson = file.toJson();
+    final reconstructedFile = FileModel.fromJson(fileJson);
+    expect(reconstructedFile.id, 'file_01');
+    expect(reconstructedFile.fileType, FileTypeEnum.pdf);
+    expect(reconstructedFile.isFavorite, true);
+
+    final storage = StorageSummaryModel.fromJson({
+      'used_bytes': 2048576,
+      'used_formatted': '2.0 MB',
+      'total_limit_bytes': 524288000,
+      'total_limit_formatted': '500.0 MB',
+      'percentage_used': 0.39,
+      'files_count': 1,
+      'by_type': {'pdf': 2048576},
+    });
+
+    expect(storage.usedBytes, 2048576);
+    expect(storage.filesCount, 1);
+    expect(storage.byType['pdf'], 2048576);
   });
 
   test('AppColors brand identity check', () {

@@ -63,7 +63,19 @@ async def _create_indexes():
         await notes_collection.create_index([("user_id", 1), ("is_pinned", 1)])
         await notes_collection.create_index("updated_at")
 
-        logger.info("MongoDB indexes for users, subjects, and notes verified successfully.")
+        files_collection = db_manager.db["files"]
+        await files_collection.create_index([("user_id", 1), ("subject_id", 1)])
+        await files_collection.create_index([("user_id", 1), ("folder_id", 1)])
+        await files_collection.create_index([("user_id", 1), ("file_type", 1)])
+        await files_collection.create_index([("user_id", 1), ("is_favorite", 1)])
+        await files_collection.create_index("created_at")
+
+        folders_collection = db_manager.db["folders"]
+        await folders_collection.create_index([("user_id", 1), ("subject_id", 1)])
+        await folders_collection.create_index([("user_id", 1), ("parent_id", 1)])
+        await folders_collection.create_index("name")
+
+        logger.info("MongoDB indexes for users, subjects, notes, and files verified successfully.")
     except Exception as e:
         logger.warning(f"Error creating indexes: {e}")
 
