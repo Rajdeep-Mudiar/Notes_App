@@ -6,6 +6,7 @@ import 'package:frontend/features/exams/models/exam_model.dart';
 import 'package:frontend/features/files/models/file_model.dart';
 import 'package:frontend/features/notes/models/note_model.dart';
 import 'package:frontend/features/subjects/models/subject_model.dart';
+import 'package:frontend/features/timetable/models/timetable_model.dart';
 
 void main() {
   test('UserModel serialization and deserialization test', () {
@@ -374,6 +375,146 @@ void main() {
     });
     expect(calendarResp.totalEvents, 1);
     expect(calendarResp.events.first.title, 'Operating Systems Midterm Exam');
+  });
+
+  test('TimetableSlotModel, AttendanceLogModel, and AttendanceSummaryModel serialization test', () {
+    final slot = TimetableSlotModel(
+      id: 'slot_101',
+      userId: 'user_123',
+      subjectId: 'sub_123',
+      subjectCode: 'CS161',
+      subjectName: 'Design & Analysis of Algorithms',
+      subjectColor: '#4F46E5',
+      title: 'Algorithms Lecture',
+      dayOfWeek: DayOfWeekEnum.monday,
+      startTime: '09:00',
+      endTime: '10:30',
+      classType: ClassTypeEnum.lecture,
+      location: 'Skilling Auditorium 080',
+      professorName: 'Dr. Tim Roughgarden',
+      notes: 'Bring lecture notebook',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    expect(slot.dayOfWeek, DayOfWeekEnum.monday);
+    expect(slot.dayOfWeek.label, 'Monday');
+    expect(slot.dayOfWeek.shortLabel, 'Mon');
+    expect(slot.classType, ClassTypeEnum.lecture);
+    expect(slot.classType.label, 'Lecture');
+    expect(slot.timeRangeFormatted, '09:00 - 10:30');
+    expect(slot.color.toARGB32(), isNotNull);
+
+    final json = slot.toJson();
+    expect(json['title'], 'Algorithms Lecture');
+    expect(json['day_of_week'], 'monday');
+    expect(json['start_time'], '09:00');
+    expect(json['end_time'], '10:30');
+    expect(json['class_type'], 'lecture');
+
+    final reconstructedSlot = TimetableSlotModel.fromJson({
+      ...json,
+      'subject_code': 'CS161',
+      'subject_name': 'Design & Analysis of Algorithms',
+      'subject_color': '#4F46E5',
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+    expect(reconstructedSlot.id, 'slot_101');
+    expect(reconstructedSlot.subjectCode, 'CS161');
+
+    final todayClass = TodayClassModel.fromJson({
+      'slot': reconstructedSlot.toJson(),
+      'status': 'ongoing',
+      'time_status_text': 'Happening now (ends in 15 mins)',
+      'attendance_today': 'present',
+      'attendance_log_id': 'att_999',
+    });
+    expect(todayClass.isOngoing, true);
+    expect(todayClass.isUpcoming, false);
+    expect(todayClass.attendanceToday, AttendanceStatusEnum.present);
+    expect(todayClass.attendanceToday?.label, 'Present');
+
+    final weekly = TimetableWeeklyModel.fromJson({
+      'monday': [reconstructedSlot.toJson()],
+      'tuesday': [],
+      'wednesday': [],
+      'thursday': [],
+      'friday': [],
+      'saturday': [],
+      'sunday': [],
+      'total_slots': 1,
+    });
+    expect(weekly.totalSlots, 1);
+    expect(weekly.getSlotsForDay(DayOfWeekEnum.monday).length, 1);
+    expect(weekly.getSlotsForDay(DayOfWeekEnum.tuesday).length, 0);
+
+    final attLog = AttendanceLogModel.fromJson({
+      'id': 'att_001',
+      'user_id': 'user_123',
+      'slot_id': 'slot_101',
+      'subject_id': 'sub_123',
+      'subject_code': 'CS161',
+      'subject_name': 'Design & Analysis of Algorithms',
+      'date': '2026-09-14',
+      'status': 'present',
+      'notes': 'Attended on time.',
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+    expect(attLog.id, 'att_001');
+    expect(attLog.status, AttendanceStatusEnum.present);
+    expect(attLog.status.color.toARGB32(), isNotNull);
+
+    final stats = SubjectAttendanceStatsModel.fromJson({
+      'subject_id': 'sub_123',
+      'subject_code': 'CS161',
+      'subject_name': 'Design & Analysis of Algorithms',
+      'subject_color': '#4F46E5',
+      'total_classes': 10,
+      'attended_classes': 9,
+      'absent_classes': 1,
+      'late_classes': 0,
+      'excused_classes': 0,
+      'attendance_percentage': 90.0,
+      'target_percentage': 75.0,
+      'is_critical': false,
+      'safe_bunks': 2,
+      'classes_needed_to_target': 0,
+    });
+    expect(stats.attendancePercentage, 90.0);
+    expect(stats.isCritical, false);
+    expect(stats.safeBunks, 2);
+
+    final summary = AttendanceSummaryModel.fromJson({
+      'overall_total_classes': 10,
+      'overall_attended_classes': 9,
+      'overall_absent_classes': 1,
+      'overall_percentage': 90.0,
+      'minimum_required_percentage': 75.0,
+      'critical_subjects_count': 0,
+      'subjects_stats': [
+        {
+          'subject_id': 'sub_123',
+          'subject_code': 'CS161',
+          'subject_name': 'Design & Analysis of Algorithms',
+          'subject_color': '#4F46E5',
+          'total_classes': 10,
+          'attended_classes': 9,
+          'absent_classes': 1,
+          'late_classes': 0,
+          'excused_classes': 0,
+          'attendance_percentage': 90.0,
+          'target_percentage': 75.0,
+          'is_critical': false,
+          'safe_bunks': 2,
+          'classes_needed_to_target': 0,
+        }
+      ],
+    });
+    expect(summary.overallPercentage, 90.0);
+    expect(summary.criticalSubjectsCount, 0);
+    expect(summary.subjectsStats.length, 1);
   });
 
   test('AppColors brand identity check', () {

@@ -88,7 +88,17 @@ async def _create_indexes():
         await exams_collection.create_index([("user_id", 1), ("exam_type", 1)])
         await exams_collection.create_index("created_at")
 
-        logger.info("MongoDB indexes for users, subjects, notes, files, assignments, and exams verified successfully.")
+        timetable_collection = db_manager.db["timetable_slots"]
+        await timetable_collection.create_index([("user_id", 1), ("day_of_week", 1)])
+        await timetable_collection.create_index([("user_id", 1), ("subject_id", 1)])
+        await timetable_collection.create_index([("user_id", 1), ("start_time", 1)])
+
+        attendance_collection = db_manager.db["attendance_logs"]
+        await attendance_collection.create_index([("user_id", 1), ("date", 1)])
+        await attendance_collection.create_index([("user_id", 1), ("subject_id", 1)])
+        await attendance_collection.create_index([("user_id", 1), ("slot_id", 1)])
+
+        logger.info("MongoDB indexes for users, subjects, notes, files, assignments, exams, and timetable verified successfully.")
     except Exception as e:
         logger.warning(f"Error creating indexes: {e}")
 
