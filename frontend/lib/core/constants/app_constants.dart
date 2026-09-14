@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = 'Student OS';
+  static const String appName = 'Notoo';
   static const String appTagline = 'All-in-One University Workspace';
   static const String appVersion = '1.0.0';
 

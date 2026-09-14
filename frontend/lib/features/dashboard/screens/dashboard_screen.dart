@@ -81,25 +81,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/logo.png',
+                width: 30,
+                height: 30,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 18),
+                ),
               ),
-              child: const Icon(Icons.school_rounded, color: Colors.white, size: 18),
             ),
             const SizedBox(width: 10),
             const Text(
-              'Student OS',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19, letterSpacing: -0.3),
+              'Notoo',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, letterSpacing: -0.3),
             ),
           ],
         ),

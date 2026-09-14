@@ -103,7 +103,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Sign up for Student OS to organize notes, track assignments, and prepare for exams with AI.',
+                      'Sign up for Notoo to organize notes, track assignments, and prepare for exams with AI.',
                       style: AppTextStyles.bodyMedium(context).copyWith(
                         color: AppColors.lightTextSecondary,
                       ),

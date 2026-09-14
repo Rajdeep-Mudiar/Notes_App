@@ -41,7 +41,7 @@ class ApiException implements Exception {
         return const ApiException(message: 'Request was cancelled.');
       case DioExceptionType.connectionError:
         return const ApiException(
-          message: 'Unable to connect to Student OS backend server. Please verify backend is running.',
+          message: 'Unable to connect to Notoo backend server. Please verify backend is running.',
           statusCode: 503,
         );
       default:

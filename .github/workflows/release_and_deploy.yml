@@ -1,4 +1,4 @@
-name: Build & Release Student OS APK
+name: Build & Release Notoo APK
 
 on:
   push:
@@ -61,29 +61,29 @@ jobs:
       - name: Prepare APK Artifact
         run: |
           mkdir -p release_assets
-          cp frontend/build/app/outputs/flutter-apk/app-release.apk release_assets/StudentOS-${{ steps.tag_gen.outputs.tag }}.apk
-          cp frontend/build/app/outputs/flutter-apk/app-release.apk release_assets/StudentOS-latest.apk
+          cp frontend/build/app/outputs/flutter-apk/app-release.apk release_assets/Notoo-${{ steps.tag_gen.outputs.tag }}.apk
+          cp frontend/build/app/outputs/flutter-apk/app-release.apk release_assets/Notoo-latest.apk
 
       - name: Create GitHub Release & Upload APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag_gen.outputs.tag }}
-          name: "Student OS Release ${{ steps.tag_gen.outputs.tag }}"
+          name: "Notoo Release ${{ steps.tag_gen.outputs.tag }}"
           body: |
-            ## 🚀 Student OS Android Release (${{ steps.tag_gen.outputs.tag }})
+            ## 🚀 Notoo Android Release (${{ steps.tag_gen.outputs.tag }})
 
             ### ✨ Features & Capabilities:
-            - **Google 1-Tap Sign-In**: Authenticate instantly with your student Google/Gmail account.
-            - **AI Study Assistant**: Ask AI grounded questions, generate practice quizzes, study flashcards & exam revision summaries.
+            - **Notoo Workspace**: Block notes, AI study synthesizer, exam & assignment scheduler.
+            - **Google 1-Tap Sign-In & Offline Resilience**: Smooth instant onboarding with optional details.
             - **Groq High-Speed LLM**: Powered by ultra-fast Llama-3.3-70B and Round-Robin key rotation.
-            - **Zero Overflow UI**: Fully responsive on all mobile screens.
+            - **Zero Overflow UI**: Tailored for all Android form factors.
             - **Auto-Update System**: In-app notifications for future updates.
 
             ### 📲 Download & Install:
-            Download **`StudentOS-${{ steps.tag_gen.outputs.tag }}.apk`** (or `StudentOS-latest.apk`) below to install on your Android phone.
+            Download **`Notoo-${{ steps.tag_gen.outputs.tag }}.apk`** (or `Notoo-latest.apk`) below to install on your Android phone.
           files: |
-            release_assets/StudentOS-${{ steps.tag_gen.outputs.tag }}.apk
-            release_assets/StudentOS-latest.apk
+            release_assets/Notoo-${{ steps.tag_gen.outputs.tag }}.apk
+            release_assets/Notoo-latest.apk
           draft: false
           prerelease: false
         env:

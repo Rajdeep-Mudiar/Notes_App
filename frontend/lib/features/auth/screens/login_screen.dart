@@ -82,11 +82,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Brand Icon & Badge
                     Center(
                       child: Container(
-                        height: 64,
-                        width: 64,
+                        height: 68,
+                        width: 68,
                         decoration: BoxDecoration(
                           gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.primary.withValues(alpha: 0.35),
@@ -95,10 +95,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.school_rounded,
-                          color: Colors.white,
-                          size: 32,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.menu_book_rounded,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -106,7 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     // Title & Subtitle
                     Text(
-                      'Welcome to Student OS',
+                      'Welcome to Notoo',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.displayMedium(context),
                     ),
@@ -251,7 +258,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Text(
-                          "New to Student OS? ",
+                          "New to Notoo? ",
                           style: TextStyle(
                             color: AppColors.lightTextSecondary,
                             fontSize: 14,

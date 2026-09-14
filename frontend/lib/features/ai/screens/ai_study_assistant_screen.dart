@@ -423,7 +423,7 @@ class _AiStudyAssistantScreenState extends ConsumerState<AiStudyAssistantScreen>
                 const Icon(Icons.auto_awesome_rounded, color: Color(0xFF6366F1), size: 14),
                 const SizedBox(width: 6),
                 const Text(
-                  'Student OS AI',
+                  'Notoo AI',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF6366F1)),
                 ),
               ],

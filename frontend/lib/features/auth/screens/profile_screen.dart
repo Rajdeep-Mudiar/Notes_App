@@ -364,7 +364,7 @@ class ProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Student OS App',
+                                'Notoo App',
                                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                               ),
                               Text(
@@ -630,7 +630,7 @@ class ProfileScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log Out of Student OS?'),
+        title: const Text('Log Out of Notoo?'),
         content: const Text('Are you sure you want to end your current session? You will need to sign in again to access your workspace.'),
         actions: [
           TextButton(
