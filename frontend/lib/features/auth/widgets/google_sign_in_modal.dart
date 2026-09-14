@@ -27,8 +27,8 @@ class GoogleSignInModal extends ConsumerStatefulWidget {
 }
 
 class _GoogleSignInModalState extends ConsumerState<GoogleSignInModal> {
-  final _emailController = TextEditingController(text: 'alex.rivera.stanford@gmail.com');
-  final _nameController = TextEditingController(text: 'Alex Rivera');
+  final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
   final _tokenController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _showTokenField = false;

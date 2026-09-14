@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:frontend/core/constants/api_endpoints.dart';
 import 'package:frontend/core/storage/storage_service.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -8,6 +9,10 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    // Dynamically synchronize current baseUrl from user config or runtime setting
+    if (!options.path.startsWith('http://') && !options.path.startsWith('https://')) {
+      options.baseUrl = ApiEndpoints.baseUrl;
+    }
     final token = _storage.getAccessToken();
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
