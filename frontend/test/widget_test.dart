@@ -7,9 +7,14 @@ import 'package:frontend/features/files/models/file_model.dart';
 import 'package:frontend/features/notes/models/note_model.dart';
 import 'package:frontend/features/subjects/models/subject_model.dart';
 import 'package:frontend/features/timetable/models/timetable_model.dart';
+import 'package:frontend/features/analytics/models/analytics_model.dart';
+import 'package:frontend/features/notifications/models/notification_model.dart';
+import 'package:frontend/features/ingestion/models/ingestion_model.dart';
+import 'package:frontend/features/ai/models/ai_model.dart';
 
 void main() {
   test('UserModel serialization and deserialization test', () {
+
     final user = UserModel(
       id: 'test_id_123',
       email: 'student@stanford.edu',
@@ -517,8 +522,450 @@ void main() {
     expect(summary.subjectsStats.length, 1);
   });
 
+  test('SubjectGradeModel, SemesterGpaModel, and GpaSummaryModel serialization test', () {
+    final grade = SubjectGradeModel(
+      subjectId: 'sub_101',
+      subjectCode: 'CS106B',
+      subjectName: 'Programming Abstractions',
+      subjectColor: '#4F46E5',
+      semester: 1,
+      credits: 5,
+      letterGrade: 'A',
+      numericalGrade: 92.0,
+      gradePoint: 4.0,
+      targetGrade: 'A',
+      isGraded: true,
+    );
+
+    expect(grade.subjectCode, 'CS106B');
+    expect(grade.letterGrade, 'A');
+    expect(grade.gradePoint, 4.0);
+    expect(grade.isGraded, true);
+
+    final json = grade.toJson();
+    expect(json['subject_id'], 'sub_101');
+    expect(json['letter_grade'], 'A');
+    expect(json['grade_point'], 4.0);
+
+    final reconstructed = SubjectGradeModel.fromJson(json);
+    expect(reconstructed.subjectId, 'sub_101');
+    expect(reconstructed.credits, 5);
+    expect(reconstructed.isGraded, true);
+
+    final semesterGpa = SemesterGpaModel.fromJson({
+      'semester': 1,
+      'semester_label': 'Semester 1',
+      'total_credits': 15,
+      'graded_credits': 15,
+      'sgpa': 3.85,
+      'subjects': [reconstructed.toJson()],
+    });
+
+    expect(semesterGpa.semester, 1);
+    expect(semesterGpa.sgpa, 3.85);
+    expect(semesterGpa.subjects.length, 1);
+    expect(semesterGpa.subjects.first.subjectCode, 'CS106B');
+
+    final gpaSummary = GpaSummaryModel.fromJson({
+      'current_cgpa': 3.81,
+      'target_cgpa': 3.90,
+      'scale': 'scale_4_0',
+      'total_enrolled_credits': 30,
+      'total_earned_credits': 30,
+      'graduation_required_credits': 120,
+      'credits_progress_percentage': 25.0,
+      'honors_standing': 'Magna Cum Laude',
+      'academic_status': 'Good Standing',
+      'semester_breakdown': [semesterGpa.toJson()],
+      'highest_sgpa_semester': 1,
+      'lowest_sgpa_semester': 1,
+    });
+
+    expect(gpaSummary.currentCgpa, 3.81);
+    expect(gpaSummary.honorsStanding, 'Magna Cum Laude');
+    expect(gpaSummary.creditsProgressPercentage, 25.0);
+    expect(gpaSummary.semesterBreakdown.length, 1);
+  });
+
+  test('WhatIfCourseInputModel and WhatIfScenarioResponseModel serialization test', () {
+    final whatIfCourse = WhatIfCourseInputModel(
+      courseName: 'Deep Learning Lab',
+      credits: 4,
+      hypotheticalGrade: 'A',
+    );
+
+    final json = whatIfCourse.toJson();
+    expect(json['course_name'], 'Deep Learning Lab');
+    expect(json['credits'], 4);
+    expect(json['hypothetical_grade'], 'A');
+
+    final reconstructedCourse = WhatIfCourseInputModel.fromJson(json);
+    expect(reconstructedCourse.courseName, 'Deep Learning Lab');
+    expect(reconstructedCourse.credits, 4);
+
+    final response = WhatIfScenarioResponseModel.fromJson({
+      'baseline_cgpa': 3.81,
+      'projected_cgpa': 3.87,
+      'cgpa_difference': 0.06,
+      'total_projected_credits': 27,
+      'target_cgpa': 3.85,
+      'target_achieved': true,
+      'required_average_grade_point': 3.65,
+      'projection_message': 'Target achieved! Your projected CGPA of 3.87 exceeds your goal.',
+    });
+
+    expect(response.baselineCgpa, 3.81);
+    expect(response.projectedCgpa, 3.87);
+    expect(response.cgpaDifference, 0.06);
+    expect(response.targetAchieved, true);
+    expect(response.projectionMessage, contains('Target achieved!'));
+  });
+
+  test('GradingScale enum helper tests', () {
+    expect(GradingScale.fromString('scale_4_0'), GradingScale.scale40);
+    expect(GradingScale.fromString('scale_10_0'), GradingScale.scale100);
+    expect(GradingScale.fromString('percentage'), GradingScale.percentage);
+    expect(GradingScale.fromString('unknown'), GradingScale.scale40);
+  });
+
+  test('NotificationModel, NotificationTypeEnum, and NotificationListResponseModel test', () {
+    final notif = NotificationModel(
+      id: 'notif_001',
+      userId: 'user_123',
+      type: NotificationTypeEnum.assignmentDue,
+      priority: NotificationPriorityEnum.high,
+      title: 'Assignment Due Tomorrow!',
+      message: 'Operating Systems Lab 2 is due in 18 hours.',
+      actionRoute: '/assignments',
+      isRead: false,
+      metadata: {'asgn_id': '101'},
+      createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
+      readAt: null,
+    );
+
+    expect(notif.type, NotificationTypeEnum.assignmentDue);
+    expect(notif.type.label, 'Assignment Due');
+    expect(notif.type.color.toARGB32(), isNotNull);
+    expect(notif.type.icon, isNotNull);
+
+    expect(notif.priority, NotificationPriorityEnum.high);
+    expect(notif.priority.label, 'High');
+    expect(notif.priority.color.toARGB32(), isNotNull);
+    expect(notif.timeAgo, '10m ago');
+
+    final json = notif.toJson();
+    expect(json['id'], 'notif_001');
+    expect(json['type'], 'assignment_due');
+    expect(json['priority'], 'high');
+    expect(json['is_read'], false);
+    expect(json['action_route'], '/assignments');
+
+    final reconstructed = NotificationModel.fromJson(json);
+    expect(reconstructed.id, 'notif_001');
+    expect(reconstructed.type, NotificationTypeEnum.assignmentDue);
+    expect(reconstructed.priority, NotificationPriorityEnum.high);
+    expect(reconstructed.isRead, false);
+    expect(reconstructed.actionRoute, '/assignments');
+
+    final listResponse = NotificationListResponseModel.fromJson({
+      'items': [json],
+      'total': 1,
+      'unread_count': 1,
+    });
+    expect(listResponse.total, 1);
+    expect(listResponse.unreadCount, 1);
+    expect(listResponse.items.first.title, 'Assignment Due Tomorrow!');
+
+    // Test enum parsing fallbacks
+    expect(NotificationTypeEnum.fromString('exam_upcoming'), NotificationTypeEnum.examUpcoming);
+    expect(NotificationTypeEnum.fromString('class_starting'), NotificationTypeEnum.classStarting);
+    expect(NotificationTypeEnum.fromString('attendance_warning'), NotificationTypeEnum.attendanceWarning);
+    expect(NotificationTypeEnum.fromString('gpa_alert'), NotificationTypeEnum.gpaAlert);
+    expect(NotificationTypeEnum.fromString('unknown_type'), NotificationTypeEnum.system);
+
+    expect(NotificationPriorityEnum.fromString('high'), NotificationPriorityEnum.high);
+    expect(NotificationPriorityEnum.fromString('normal'), NotificationPriorityEnum.normal);
+    expect(NotificationPriorityEnum.fromString('low'), NotificationPriorityEnum.low);
+    expect(NotificationPriorityEnum.fromString('unknown'), NotificationPriorityEnum.normal);
+  });
+
+  test('IngestionStatusModel, IngestionStatsModel, and SemanticSearchResponseModel test', () {
+    final status = IngestionStatusModel(
+      sourceId: 'src_001',
+      sourceType: SourceTypeEnum.file,
+      sourceName: 'Lecture01_Intro.pdf',
+      status: IngestionStatusEnum.completed,
+      chunksCount: 5,
+      totalTokens: 620,
+      updatedAt: DateTime.parse('2026-09-14T12:00:00Z'),
+    );
+
+    expect(status.sourceType, SourceTypeEnum.file);
+    expect(status.sourceType.label, 'File');
+    expect(status.status, IngestionStatusEnum.completed);
+    expect(status.status.label, 'AI Indexed');
+    expect(status.isCompleted, true);
+    expect(status.isProcessing, false);
+    expect(status.isFailed, false);
+
+    final statusJson = status.toJson();
+    expect(statusJson['source_id'], 'src_001');
+    expect(statusJson['source_type'], 'file');
+    expect(statusJson['status'], 'completed');
+    expect(statusJson['chunks_count'], 5);
+
+    final reconstructedStatus = IngestionStatusModel.fromJson(statusJson);
+    expect(reconstructedStatus.sourceId, 'src_001');
+    expect(reconstructedStatus.chunksCount, 5);
+    expect(reconstructedStatus.isCompleted, true);
+
+    final stats = IngestionStatsModel.fromJson({
+      'total_chunks': 24,
+      'total_indexed_files': 3,
+      'total_indexed_notes': 5,
+      'total_tokens_estimated': 3200,
+      'by_subject': {'sub_101': 14, 'sub_102': 10},
+      'by_type': {'file': 10, 'note': 14},
+    });
+
+    expect(stats.totalChunks, 24);
+    expect(stats.totalIndexedFiles, 3);
+    expect(stats.totalIndexedNotes, 5);
+    expect(stats.totalIndexedSources, 8);
+    expect(stats.bySubject['sub_101'], 14);
+    expect(stats.byType['note'], 14);
+
+    final searchResp = SemanticSearchResponseModel.fromJson({
+      'query': 'gradient descent',
+      'results_count': 1,
+      'results': [
+        {
+          'chunk_id': 'chk_999',
+          'source_id': 'src_001',
+          'source_type': 'note',
+          'source_name': 'Convex Optimization Notes',
+          'subject_id': 'sub_101',
+          'page_or_section': 'Section 2',
+          'text_content': 'Gradient descent updates theta in the direction of negative gradient.',
+          'similarity_score': 0.88,
+          'metadata': {'pinned': true},
+        }
+      ],
+    });
+
+    expect(searchResp.query, 'gradient descent');
+    expect(searchResp.resultsCount, 1);
+    expect(searchResp.results.first.similarityScore, 0.88);
+    expect(searchResp.results.first.sourceType, SourceTypeEnum.note);
+
+    // Test enum fallbacks
+    expect(SourceTypeEnum.fromString('file'), SourceTypeEnum.file);
+    expect(SourceTypeEnum.fromString('note'), SourceTypeEnum.note);
+    expect(SourceTypeEnum.fromString('unknown'), SourceTypeEnum.note);
+
+    expect(IngestionStatusEnum.fromString('pending'), IngestionStatusEnum.pending);
+    expect(IngestionStatusEnum.fromString('processing'), IngestionStatusEnum.processing);
+    expect(IngestionStatusEnum.fromString('completed'), IngestionStatusEnum.completed);
+    expect(IngestionStatusEnum.fromString('failed'), IngestionStatusEnum.failed);
+    expect(IngestionStatusEnum.fromString('unknown'), IngestionStatusEnum.pending);
+  });
+
+  test('AI StudyModeEnum, CitationItemModel, and ChatMessageModel serialization test', () {
+    expect(StudyModeEnum.chat.label, 'Ask AI');
+    expect(StudyModeEnum.quiz.label, 'Practice Quiz');
+    expect(StudyModeEnum.flashcards.label, 'Flashcards');
+    expect(StudyModeEnum.summary.label, 'Exam Summary');
+    expect(StudyModeEnum.fromString('quiz'), StudyModeEnum.quiz);
+    expect(StudyModeEnum.fromString('flashcards'), StudyModeEnum.flashcards);
+    expect(StudyModeEnum.fromString('summary'), StudyModeEnum.summary);
+    expect(StudyModeEnum.fromString('unknown'), StudyModeEnum.chat);
+
+    final citation = CitationItemModel(
+      chunkId: 'chk_101',
+      sourceId: 'file_202',
+      sourceName: 'Distributed_Systems_Lec3.pdf',
+      sourceType: SourceTypeEnum.file,
+      subjectId: 'sub_301',
+      pageOrSection: 'Page 12',
+      snippet: 'Raft consensus algorithm uses leader election and log replication.',
+      similarityScore: 0.92,
+    );
+
+    final citationJson = citation.toJson();
+    expect(citationJson['chunk_id'], 'chk_101');
+    expect(citationJson['source_type'], 'file');
+    expect(citationJson['page_or_section'], 'Page 12');
+
+    final reconstructedCitation = CitationItemModel.fromJson(citationJson);
+    expect(reconstructedCitation.chunkId, 'chk_101');
+    expect(reconstructedCitation.similarityScore, 0.92);
+    expect(reconstructedCitation.sourceType, SourceTypeEnum.file);
+
+    final message = ChatMessageModel(
+      role: 'assistant',
+      content: 'Raft achieves consensus via leader election [1].',
+      citations: [reconstructedCitation],
+      createdAt: DateTime.parse('2026-09-14T15:00:00Z'),
+    );
+
+    expect(message.isAssistant, true);
+    expect(message.isUser, false);
+    expect(message.citations.length, 1);
+
+    final messageJson = message.toJson();
+    expect(messageJson['role'], 'assistant');
+    expect(messageJson['content'], contains('Raft achieves'));
+
+    final reconstructedMsg = ChatMessageModel.fromJson(messageJson);
+    expect(reconstructedMsg.role, 'assistant');
+    expect(reconstructedMsg.citations.first.chunkId, 'chk_101');
+
+    final chatResp = ChatResponseModel.fromJson({
+      'session_id': 'sess_abc',
+      'reply': 'Here is the explanation...',
+      'citations': [citationJson],
+      'mode': 'chat',
+      'created_at': '2026-09-14T15:00:00Z',
+    });
+    expect(chatResp.sessionId, 'sess_abc');
+    expect(chatResp.mode, StudyModeEnum.chat);
+    expect(chatResp.citations.length, 1);
+  });
+
+  test('QuizQuestionModel and QuizResponseModel serialization and scoring logic test', () {
+    final citation = CitationItemModel(
+      chunkId: 'chk_101',
+      sourceId: 'file_202',
+      sourceName: 'Distributed_Systems_Lec3.pdf',
+      sourceType: SourceTypeEnum.file,
+      snippet: 'Raft uses leader election.',
+      similarityScore: 0.92,
+    );
+
+    final question = QuizQuestionModel(
+      id: 'q_01',
+      question: 'What mechanism does Raft use to maintain state consistency across nodes?',
+      options: [
+        'Two-Phase Commit',
+        'Log Replication and Leader Election',
+        'Gossip Protocol',
+        'Proof of Work',
+      ],
+      correctOptionIndex: 1,
+      explanation: 'Raft manages replicated logs through an elected leader node.',
+      citation: citation,
+    );
+
+    expect(question.isAnswered, false);
+    expect(question.isCorrect, false);
+
+    question.selectedOptionIndex = 1;
+    expect(question.isAnswered, true);
+    expect(question.isCorrect, true);
+
+    question.selectedOptionIndex = 0;
+    expect(question.isCorrect, false);
+
+    final qJson = question.toJson();
+    expect(qJson['id'], 'q_01');
+    expect(qJson['correct_option_index'], 1);
+    expect(qJson['options'].length, 4);
+
+    final reconstructedQ = QuizQuestionModel.fromJson(qJson);
+    expect(reconstructedQ.id, 'q_01');
+    expect(reconstructedQ.explanation, contains('replicated logs'));
+    expect(reconstructedQ.citation?.sourceName, 'Distributed_Systems_Lec3.pdf');
+
+    final quizResp = QuizResponseModel.fromJson({
+      'title': 'Distributed Systems Practice Quiz',
+      'subject_id': 'sub_301',
+      'questions': [qJson],
+      'total_questions': 1,
+      'created_at': '2026-09-14T15:00:00Z',
+    });
+
+    expect(quizResp.title, 'Distributed Systems Practice Quiz');
+    expect(quizResp.totalQuestions, 1);
+    expect(quizResp.questions.first.options.length, 4);
+  });
+
+  test('FlashcardItemModel, FlashcardResponseModel, and SummaryResponseModel test', () {
+    final flashcard = FlashcardItemModel(
+      id: 'fc_01',
+      front: 'What is theCAP theorem?',
+      back: 'A distributed data store can simultaneously provide at most two of Consistency, Availability, and Partition tolerance.',
+      category: 'System Design',
+      isMastered: false,
+    );
+
+    expect(flashcard.isMastered, false);
+    flashcard.isMastered = true;
+    expect(flashcard.isMastered, true);
+
+    final fcJson = flashcard.toJson();
+    expect(fcJson['id'], 'fc_01');
+    expect(fcJson['category'], 'System Design');
+    expect(fcJson['is_mastered'], true);
+
+    final reconstructedFc = FlashcardItemModel.fromJson(fcJson);
+    expect(reconstructedFc.front, contains('CAP theorem'));
+    expect(reconstructedFc.isMastered, true);
+
+    final fcDeck = FlashcardResponseModel.fromJson({
+      'title': 'Distributed Systems Flashcards',
+      'subject_id': 'sub_301',
+      'cards': [fcJson],
+      'total_cards': 1,
+      'created_at': '2026-09-14T15:00:00Z',
+    });
+
+    expect(fcDeck.title, 'Distributed Systems Flashcards');
+    expect(fcDeck.totalCards, 1);
+    expect(fcDeck.cards.first.category, 'System Design');
+
+    final summary = SummaryResponseModel.fromJson({
+      'title': 'Exam High-Yield Summary: Distributed Consensus',
+      'subject_id': 'sub_301',
+      'overview': 'Consensus algorithms guarantee safety and liveness under asynchronous networks.',
+      'key_concepts': ['Paxos vs Raft', 'State Machine Replication', 'Byzantine Fault Tolerance'],
+      'important_formulas_or_takeaways': ['Quorum size: Q = floor(N/2) + 1', 'F <= (N-1)/2 crash faults tolerated'],
+      'exam_tips': ['Remember to calculate quorum size when N is odd vs even.', 'Draw leader election state transition.'],
+      'citations': [],
+      'created_at': '2026-09-14T15:00:00Z',
+    });
+
+    expect(summary.title, contains('Distributed Consensus'));
+    expect(summary.keyConcepts.length, 3);
+    expect(summary.importantFormulasOrTakeaways.length, 2);
+    expect(summary.examTips.length, 2);
+
+    final session = ConversationSessionModel.fromJson({
+      'id': 'sess_999',
+      'user_id': 'user_123',
+      'title': 'Raft Algorithm Review',
+      'subject_id': 'sub_301',
+      'messages_count': 6,
+      'last_message_preview': 'Can you explain leader election?',
+      'updated_at': '2026-09-14T15:00:00Z',
+    });
+
+    expect(session.id, 'sess_999');
+    expect(session.messagesCount, 6);
+    expect(session.lastMessagePreview, contains('leader election'));
+
+    final sessionList = ConversationListResponseModel.fromJson({
+      'sessions': [session.toJson()],
+      'total': 1,
+    });
+    expect(sessionList.total, 1);
+    expect(sessionList.sessions.first.title, 'Raft Algorithm Review');
+  });
+
   test('AppColors brand identity check', () {
     expect(AppColors.primary.toARGB32(), isNotNull);
     expect(AppColors.success.toARGB32(), isNotNull);
   });
 }
+
+
+

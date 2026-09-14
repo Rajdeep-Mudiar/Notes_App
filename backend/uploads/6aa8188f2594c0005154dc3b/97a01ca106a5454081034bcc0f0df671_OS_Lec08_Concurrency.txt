@@ -1,0 +1,3 @@
+Operating Systems Lecture 08: Concurrency & Synchronization Primitives.
+Mutual exclusion is achieved via Peterson's algorithm, mutex locks, and counting semaphores.
+Dining Philosophers problem illustrates deadlock condition: Mutual Exclusion, Hold and Wait, No Preemption, Circular Wait.

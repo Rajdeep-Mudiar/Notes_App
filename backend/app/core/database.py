@@ -98,9 +98,28 @@ async def _create_indexes():
         await attendance_collection.create_index([("user_id", 1), ("subject_id", 1)])
         await attendance_collection.create_index([("user_id", 1), ("slot_id", 1)])
 
-        logger.info("MongoDB indexes for users, subjects, notes, files, assignments, exams, and timetable verified successfully.")
+        notifications_collection = db_manager.db["notifications"]
+        await notifications_collection.create_index([("user_id", 1), ("is_read", 1), ("created_at", -1)])
+        await notifications_collection.create_index([("user_id", 1), ("type", 1)])
+        await notifications_collection.create_index([("user_id", 1), ("dedup_key", 1)])
+
+        chunks_collection = db_manager.db["document_chunks"]
+        await chunks_collection.create_index([("user_id", 1), ("source_id", 1)])
+        await chunks_collection.create_index([("user_id", 1), ("subject_id", 1)])
+        await chunks_collection.create_index([("user_id", 1), ("source_type", 1)])
+        await chunks_collection.create_index("created_at")
+
+        status_collection = db_manager.db["ingestion_status"]
+        await status_collection.create_index([("user_id", 1), ("source_id", 1)], unique=True)
+
+        conversations_collection = db_manager.db["ai_conversations"]
+        await conversations_collection.create_index([("user_id", 1), ("session_id", 1)], unique=True)
+        await conversations_collection.create_index([("user_id", 1), ("updated_at", -1)])
+
+        logger.info("MongoDB indexes for users, subjects, notes, files, assignments, exams, timetable, notifications, document chunks, and AI conversations verified successfully.")
     except Exception as e:
         logger.warning(f"Error creating indexes: {e}")
+
 
 
 def get_database() -> AsyncIOMotorDatabase:

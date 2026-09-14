@@ -1,0 +1,3 @@
+Lecture 04: Deep Neural Networks and Backpropagation.
+
+Neural networks consist of multiple interconnected layers of artificial neurons. Forward propagation computes activations across hidden layers with non-linear activation functions like ReLU. Backpropagation computes the error gradient of the cost function with respect to weights using the chain rule of calculus.
