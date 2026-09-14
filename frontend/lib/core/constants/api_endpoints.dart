@@ -1,22 +1,28 @@
 import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
-  static const String _customBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static String? _dynamicBaseUrl;
+
+  static void setCustomBaseUrl(String? url) {
+    _dynamicBaseUrl = url;
+  }
 
   static String get baseUrl {
-    if (_customBaseUrl.isNotEmpty) {
-      return _customBaseUrl.endsWith('/api/v1') ? _customBaseUrl : '$_customBaseUrl/api/v1';
+    if (_dynamicBaseUrl != null && _dynamicBaseUrl!.isNotEmpty) {
+      final clean = _dynamicBaseUrl!.trim().replaceAll(RegExp(r'/+$'), '');
+      return clean.endsWith('/api/v1') ? clean : '$clean/api/v1';
+    }
+    if (_envBaseUrl.isNotEmpty) {
+      final clean = _envBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+      return clean.endsWith('/api/v1') ? clean : '$clean/api/v1';
     }
     if (kIsWeb) {
       return 'http://127.0.0.1:8000/api/v1';
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        const useEmulatorGateway = bool.fromEnvironment('USE_EMULATOR_GATEWAY', defaultValue: false);
-        if (useEmulatorGateway) {
-          return 'http://10.0.2.2:8000/api/v1';
-        }
-        return 'http://127.0.0.1:8000/api/v1';
+        return 'http://10.0.2.2:8000/api/v1';
       default:
         return 'http://127.0.0.1:8000/api/v1';
     }

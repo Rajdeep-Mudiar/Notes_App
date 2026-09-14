@@ -68,4 +68,13 @@ class StorageService {
   String getThemeMode() {
     return _prefs.getString(AppConstants.keyThemeMode) ?? 'system';
   }
+
+  // Server URL Management
+  Future<bool> saveServerUrl(String url) async {
+    return await _prefs.setString('custom_server_url', url);
+  }
+
+  String? getServerUrl() {
+    return _prefs.getString('custom_server_url');
+  }
 }

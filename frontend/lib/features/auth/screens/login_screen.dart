@@ -9,6 +9,7 @@ import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/features/auth/widgets/google_sign_in_button.dart';
 import 'package:frontend/shared/widgets/custom_button.dart';
 import 'package:frontend/shared/widgets/custom_text_field.dart';
+import 'package:frontend/shared/widgets/server_settings_dialog.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -54,6 +55,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Server Connection Settings',
+            icon: const Icon(Icons.dns_rounded, size: 20),
+            onPressed: () => ServerSettingsDialog.show(context),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

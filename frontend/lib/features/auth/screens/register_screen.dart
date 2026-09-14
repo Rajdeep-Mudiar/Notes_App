@@ -9,6 +9,7 @@ import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/features/auth/widgets/google_sign_in_button.dart';
 import 'package:frontend/shared/widgets/custom_button.dart';
 import 'package:frontend/shared/widgets/custom_text_field.dart';
+import 'package:frontend/shared/widgets/server_settings_dialog.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -21,9 +22,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _universityController = TextEditingController(text: 'Stanford University');
-  final _degreeController = TextEditingController(text: 'B.S. Computer Science');
-  final _semesterController = TextEditingController(text: '4');
+  final _universityController = TextEditingController();
+  final _degreeController = TextEditingController();
+  final _semesterController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
@@ -42,13 +43,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       FocusScope.of(context).unfocus();
       final semester = int.tryParse(_semesterController.text.trim()) ?? 1;
+      final university = _universityController.text.trim();
+      final degree = _degreeController.text.trim();
       final success = await ref.read(authNotifierProvider.notifier).register(
             email: _emailController.text.trim(),
             password: _passwordController.text,
             fullName: _nameController.text.trim(),
-            university: _universityController.text.trim(),
-            degree: _degreeController.text.trim(),
-            currentSemester: semester,
+            university: university.isNotEmpty ? university : 'University',
+            degree: degree.isNotEmpty ? degree : 'Degree Program',
+            currentSemester: semester > 0 ? semester : 1,
           );
       if (success && mounted) {
         context.go(RouteNames.home);
@@ -73,6 +76,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             }
           },
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Server Connection Settings',
+            icon: const Icon(Icons.dns_rounded, size: 20),
+            onPressed: () => ServerSettingsDialog.show(context),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Center(
@@ -166,10 +177,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           flex: 2,
                           child: CustomTextField(
                             controller: _universityController,
-                            label: 'University',
-                            hint: 'Stanford University',
+                            label: 'University (Optional)',
+                            hint: 'e.g. Stanford University',
                             prefixIcon: Icons.school_outlined,
-                            validator: (v) => Validators.required(v, message: 'Required'),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -178,10 +188,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           child: CustomTextField(
                             controller: _semesterController,
                             label: 'Sem',
-                            hint: '4',
+                            hint: '1',
                             prefixIcon: Icons.timeline_rounded,
                             keyboardType: TextInputType.number,
-                            validator: Validators.semester,
                           ),
                         ),
                       ],
@@ -191,10 +200,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     // Degree / Major
                     CustomTextField(
                       controller: _degreeController,
-                      label: 'Degree & Major',
-                      hint: 'B.S. Computer Science',
+                      label: 'Degree & Major (Optional)',
+                      hint: 'e.g. B.S. Computer Science',
                       prefixIcon: Icons.menu_book_rounded,
-                      validator: (v) => Validators.required(v, message: 'Degree is required'),
                     ),
                     const SizedBox(height: 16),
 
