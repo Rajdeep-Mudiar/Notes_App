@@ -507,6 +507,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   Widget _buildOverviewTab(BuildContext context, SubjectModel subject) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final subjectColor = subject.color;
 
     return SingleChildScrollView(
@@ -613,9 +614,11 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.lightBorder),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+                  ),
                 ),
                 child: Text(
                   subject.description.isNotEmpty
@@ -624,7 +627,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.5,
-                    color: subject.description.isNotEmpty ? AppColors.lightTextPrimary : AppColors.lightTextMuted,
+                    color: subject.description.isNotEmpty
+                        ? (isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary)
+                        : (isDark ? const Color(0xFF64748B) : AppColors.lightTextMuted),
                   ),
                 ),
               ),
@@ -790,14 +795,15 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   Widget _buildFilesTab(BuildContext context, SubjectModel subject) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final filesAsync = ref.watch(subjectFilesProvider(subject.id));
 
     return filesAsync.when(
       data: (data) {
-        final files = data.items;
+        final allFiles = data.items;
         final folders = data.folders;
 
-        if (files.isEmpty && folders.isEmpty) {
+        if (allFiles.isEmpty && folders.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -809,7 +815,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.cloud_upload_rounded, color: Color(0xFF10B981), size: 48),
@@ -817,13 +823,20 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     const SizedBox(height: 16),
                     Text(
                       'No files uploaded for ${subject.code}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Store lecture slides, syllabus, reference textbooks, past papers, and worksheets.',
+                    Text(
+                      'Store lecture slides, syllabus, reference textbooks, past papers, images, and video recordings.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
@@ -833,7 +846,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       ),
                       onPressed: () => UploadFileDialog.show(context, initialSubjectId: subject.id),
                       icon: const Icon(Icons.upload_file_rounded),
-                      label: const Text('Upload First File'),
+                      label: const Text('Upload File to Course Vault'),
                     ),
                   ],
                 ),
@@ -848,8 +861,43 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Quick Upload Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Course Vault & Materials',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => UploadFileDialog.show(context, initialSubjectId: subject.id),
+                      icon: const Icon(Icons.upload_file_rounded, size: 16),
+                      label: const Text('Upload'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Folders Section
                 if (folders.isNotEmpty) ...[
-                  Text('Folders (${folders.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    'Folders (${folders.length})',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   LayoutBuilder(
                     builder: (ctx, constraints) {
@@ -873,8 +921,17 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   ),
                   const SizedBox(height: 20),
                 ],
-                if (files.isNotEmpty) ...[
-                  Text('Course Documents (${files.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                // Files Section
+                if (allFiles.isNotEmpty) ...[
+                  Text(
+                    'Documents & Media (${allFiles.length})',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   LayoutBuilder(
                     builder: (ctx, constraints) {
@@ -888,9 +945,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                           mainAxisSpacing: 12,
                           mainAxisExtent: 175,
                         ),
-                        itemCount: files.length,
+                        itemCount: allFiles.length,
                         itemBuilder: (ctx, i) {
-                          final f = files[i];
+                          final f = allFiles[i];
                           return FileCard(
                             file: f,
                             onFavoriteToggle: () {
@@ -919,7 +976,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('Error loading files: $err')),
+      error: (err, _) => Center(
+        child: Text('Error loading files: $err', style: const TextStyle(color: AppColors.error)),
+      ),
     );
   }
 
@@ -930,15 +989,18 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.lightBorder),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+          ),
         ),
         child: Column(
           children: [
@@ -946,14 +1008,21 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             const SizedBox(height: 8),
             Text(
               count,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: AppColors.lightTextSecondary),
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              ),
             ),
           ],
         ),

@@ -9,6 +9,7 @@ class StorageMeterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final progress = (storage.percentageUsed / 100.0).clamp(0.0, 1.0);
     final isHigh = progress > 0.85;
 
@@ -16,12 +17,14 @@ class StorageMeterCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -40,7 +43,7 @@ class StorageMeterCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.cloud_queue_rounded, color: AppColors.primary, size: 20),
@@ -50,15 +53,22 @@ class StorageMeterCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Cloud Academic Storage',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             '${storage.filesCount} total files stored',
-                            style: const TextStyle(color: AppColors.lightTextSecondary, fontSize: 12),
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                              fontSize: 12,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -94,7 +104,7 @@ class StorageMeterCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              backgroundColor: AppColors.lightBg,
+              backgroundColor: isDark ? const Color(0xFF0F172A) : AppColors.lightBg,
               valueColor: AlwaysStoppedAnimation<Color>(
                 isHigh ? AppColors.warning : AppColors.primary,
               ),
@@ -111,11 +121,18 @@ class StorageMeterCard extends StatelessWidget {
             children: [
               Text(
                 '${storage.usedFormatted} used',
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                ),
               ),
               Text(
                 '${storage.totalLimitFormatted} Free Student Tier',
-                style: const TextStyle(color: AppColors.lightTextSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),

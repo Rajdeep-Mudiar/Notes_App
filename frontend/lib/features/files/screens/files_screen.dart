@@ -48,6 +48,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeType = ref.watch(activeFileTypeFilterProvider);
     final selectedSubjectId = ref.watch(fileSubjectFilterProvider);
     final isFavFilter = ref.watch(fileFavoriteFilterProvider);
@@ -103,15 +104,108 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Search and Filters Bar
+                    // Subject Course Vaults Carousel
+                    subjectsAsync.when(
+                      data: (subjects) {
+                        if (subjects.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Subject Course Vaults',
+                                  style: AppTextStyles.titleMedium(context),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    ref.read(fileSubjectFilterProvider.notifier).state = null;
+                                  },
+                                  child: Text(
+                                    selectedSubjectId == null ? 'Showing All' : 'Clear Filter',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: selectedSubjectId == null
+                                          ? (isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary)
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  // All Courses Vault Card
+                                  _buildSubjectVaultCard(
+                                    context,
+                                    isDark: isDark,
+                                    title: 'All Courses',
+                                    subtitle: 'Unified Drive',
+                                    icon: Icons.all_inbox_rounded,
+                                    color: AppColors.primary,
+                                    isSelected: selectedSubjectId == null,
+                                    onTap: () {
+                                      ref.read(fileSubjectFilterProvider.notifier).state = null;
+                                    },
+                                  ),
+                                  const SizedBox(width: 10),
+                                  // Per-subject Vault Cards
+                                  ...subjects.map((s) {
+                                    final isSelected = selectedSubjectId == s.id;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 10),
+                                      child: _buildSubjectVaultCard(
+                                        context,
+                                        isDark: isDark,
+                                        title: s.code,
+                                        subtitle: s.name,
+                                        icon: s.iconData,
+                                        color: s.color,
+                                        isSelected: isSelected,
+                                        badgeCount: s.filesCount,
+                                        onTap: () {
+                                          ref.read(fileSubjectFilterProvider.notifier).state =
+                                              isSelected ? null : s.id;
+                                        },
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+
+                    // Search and Favorite Toggle Bar
                     Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: _searchController,
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+                              fontSize: 14,
+                            ),
                             decoration: InputDecoration(
-                              hintText: 'Search files across courses...',
-                              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                              hintText: 'Search documents, slides, PDFs...',
+                              hintStyle: TextStyle(
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                fontSize: 14,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                size: 20,
+                                color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                              ),
                               suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(
                                       icon: const Icon(Icons.clear, size: 18),
@@ -124,10 +218,22 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppColors.lightBorder),
+                                borderSide: BorderSide(
+                                  color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                             ),
                             onChanged: (val) {
                               ref.read(fileSearchQueryProvider.notifier).state = val.trim();
@@ -139,16 +245,22 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         IconButton.filledTonal(
                           tooltip: 'Show Favorites Only',
                           style: IconButton.styleFrom(
-                            backgroundColor: isFavFilter == true ? AppColors.warning.withValues(alpha: 0.15) : Colors.white,
+                            backgroundColor: isFavFilter == true
+                                ? AppColors.warning.withValues(alpha: 0.18)
+                                : (isDark ? const Color(0xFF1E293B) : Colors.white),
                             side: BorderSide(
-                              color: isFavFilter == true ? AppColors.warning : AppColors.lightBorder,
+                              color: isFavFilter == true
+                                  ? AppColors.warning
+                                  : (isDark ? const Color(0xFF334155) : AppColors.lightBorder),
                             ),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.all(12),
                           ),
                           icon: Icon(
                             isFavFilter == true ? Icons.star_rounded : Icons.star_outline_rounded,
-                            color: isFavFilter == true ? AppColors.warning : AppColors.lightTextSecondary,
+                            color: isFavFilter == true
+                                ? AppColors.warning
+                                : (isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary),
                             size: 22,
                           ),
                           onPressed: () {
@@ -172,9 +284,17 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                               label: Text(tf['label']!),
                               selected: isSelected,
                               showCheckmark: false,
-                              selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                              backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              selectedColor: AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.15),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                              ),
                               labelStyle: TextStyle(
-                                color: isSelected ? AppColors.primary : AppColors.lightTextPrimary,
+                                color: isSelected
+                                    ? (isDark ? const Color(0xFF93C5FD) : AppColors.primary)
+                                    : (isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary),
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                                 fontSize: 13,
                               ),
@@ -186,51 +306,17 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         }).toList(),
                       ),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Subject Dropdown Filter
-                    subjectsAsync.when(
-                      data: (subjects) {
-                        if (subjects.isEmpty) return const SizedBox.shrink();
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              ChoiceChip(
-                                label: const Text('All Courses'),
-                                selected: selectedSubjectId == null,
-                                onSelected: (sel) {
-                                  if (sel) ref.read(fileSubjectFilterProvider.notifier).state = null;
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              ...subjects.map((s) => Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: ChoiceChip(
-                                      avatar: Icon(s.iconData, size: 16, color: s.color),
-                                      label: Text(s.code),
-                                      selected: selectedSubjectId == s.id,
-                                      onSelected: (sel) {
-                                        ref.read(fileSubjectFilterProvider.notifier).state = sel ? s.id : null;
-                                      },
-                                    ),
-                                  )),
-                            ],
-                          ),
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
-                    ),
                     const SizedBox(height: 20),
 
                     // Folder Breadcrumbs
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.lightBorder),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+                        ),
                       ),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -253,7 +339,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                             ),
                             for (int i = 0; i < navStack.length; i++) ...[
                               const SizedBox(width: 6),
-                              const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.lightTextMuted),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 16,
+                                color: isDark ? const Color(0xFF64748B) : AppColors.lightTextMuted,
+                              ),
                               const SizedBox(width: 6),
                               InkWell(
                                 onTap: () {
@@ -264,7 +354,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                                   style: TextStyle(
                                     fontWeight: i == navStack.length - 1 ? FontWeight.bold : FontWeight.normal,
                                     fontSize: 13,
-                                    color: i == navStack.length - 1 ? AppColors.lightTextPrimary : AppColors.primary,
+                                    color: i == navStack.length - 1
+                                        ? (isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary)
+                                        : AppColors.primary,
                                   ),
                                 ),
                               ),
@@ -282,7 +374,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         final files = data.items;
 
                         if (folders.isEmpty && files.isEmpty) {
-                          return _buildEmptyDriveState(context);
+                          return _buildEmptyDriveState(context, isDark);
                         }
 
                         return Column(
@@ -428,35 +520,136 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     );
   }
 
-  Widget _buildEmptyDriveState(BuildContext context) {
+  Widget _buildSubjectVaultCard(
+    BuildContext context, {
+    required bool isDark,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool isSelected,
+    int? badgeCount,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 140,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color.withValues(alpha: isDark ? 0.25 : 0.12)
+                : (isDark ? const Color(0xFF1E293B) : Colors.white),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected
+                  ? color
+                  : (isDark ? const Color(0xFF334155) : AppColors.lightBorder),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: isDark ? 0.25 : 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, color: color, size: 16),
+                  ),
+                  if (badgeCount != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF334155),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyDriveState(BuildContext context, bool isDark) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withValues(alpha: 0.1),
+              color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.cloud_done_rounded, color: Color(0xFF10B981), size: 48),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No files in this location',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Upload lecture slides, research papers, assignment PDFs, images, and videos.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 14),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -480,9 +673,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   void _viewFileDetails(BuildContext context, FileModel file) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
         title: Row(
           children: [
             Icon(file.fileType.iconData, color: file.fileType.color, size: 24),
@@ -490,7 +685,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             Expanded(
               child: Text(
                 file.originalName,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -501,11 +700,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('File Type', file.fileType.label),
-            _buildDetailRow('Size', file.sizeFormatted),
-            _buildDetailRow('MIME', file.mimeType),
-            _buildDetailRow('Stored Name', file.filename),
-            _buildDetailRow('Download URL', file.downloadUrl),
+            _buildDetailRow(context, 'File Type', file.fileType.label),
+            _buildDetailRow(context, 'Size', file.sizeFormatted),
+            _buildDetailRow(context, 'MIME', file.mimeType),
+            _buildDetailRow(context, 'Stored Name', file.filename),
+            _buildDetailRow(context, 'Download URL', file.downloadUrl),
           ],
         ),
         actions: [
@@ -518,7 +717,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -526,10 +726,23 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         children: [
           SizedBox(
             width: 90,
-            child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.lightTextSecondary)),
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontSize: 12)),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+              ),
+            ),
           ),
         ],
       ),

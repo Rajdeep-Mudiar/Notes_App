@@ -26,12 +26,8 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _locationController;
-  late TextEditingController _seatController;
   late TextEditingController _durationController;
   late TextEditingController _weightController;
-  late TextEditingController _targetGradeController;
-  late TextEditingController _actualGradeController;
-  late TextEditingController _notesController;
   late TextEditingController _topicInputController;
 
   String? _selectedSubjectId;
@@ -49,15 +45,9 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
     final e = widget.exam;
     _titleController = TextEditingController(text: e?.title ?? '');
     _locationController = TextEditingController(text: e?.location ?? '');
-    _seatController = TextEditingController(text: e?.seatNumber ?? '');
     _durationController = TextEditingController(text: '${e?.durationMinutes ?? 120}');
     _weightController = TextEditingController(
         text: e?.weightPercentage != null ? e!.weightPercentage!.toString() : '');
-    _targetGradeController = TextEditingController(
-        text: e?.targetGrade != null ? e!.targetGrade!.toString() : '');
-    _actualGradeController = TextEditingController(
-        text: e?.actualGrade != null ? e!.actualGrade!.toString() : '');
-    _notesController = TextEditingController(text: e?.notes ?? '');
     _topicInputController = TextEditingController();
 
     _selectedSubjectId = e?.subjectId ?? widget.initialSubjectId;
@@ -76,12 +66,8 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
   void dispose() {
     _titleController.dispose();
     _locationController.dispose();
-    _seatController.dispose();
     _durationController.dispose();
     _weightController.dispose();
-    _targetGradeController.dispose();
-    _actualGradeController.dispose();
-    _notesController.dispose();
     _topicInputController.dispose();
     super.dispose();
   }
@@ -366,35 +352,15 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
 
                         const SizedBox(height: 16),
 
-                        // Location & Seat Number
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: TextFormField(
-                                controller: _locationController,
-                                decoration: InputDecoration(
-                                  labelText: 'Room / Venue / Hall / Link',
-                                  hintText: 'e.g. Turing Hall, Room 302 or Zoom link',
-                                  prefixIcon: const Icon(Icons.place_outlined, size: 20),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: _seatController,
-                                decoration: InputDecoration(
-                                  labelText: 'Seat Number',
-                                  hintText: 'e.g. Desk A-14',
-                                  prefixIcon: const Icon(Icons.event_seat_outlined, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
-                            ),
-                          ],
+                        // Location / Room / Venue
+                        TextFormField(
+                          controller: _locationController,
+                          decoration: InputDecoration(
+                            labelText: 'Room / Venue / Hall / Link (Optional)',
+                            hintText: 'e.g. Turing Hall, Room 302 or Zoom link',
+                            prefixIcon: const Icon(Icons.place_outlined, size: 20),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
 
                         const SizedBox(height: 16),
@@ -452,53 +418,6 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
                             }).toList(),
                           ),
                         ],
-
-                        const SizedBox(height: 16),
-
-                        // Target Grade & Actual Score
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _targetGradeController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: InputDecoration(
-                                  labelText: 'Target Grade Goal (%)',
-                                  hintText: 'e.g. 90.0',
-                                  prefixIcon: const Icon(Icons.flag_outlined, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _actualGradeController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: InputDecoration(
-                                  labelText: 'Actual Score (%)',
-                                  hintText: 'e.g. 94.5',
-                                  prefixIcon: const Icon(Icons.verified_outlined, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Notes & Permitted Items
-                        TextFormField(
-                          controller: _notesController,
-                          maxLines: 2,
-                          decoration: InputDecoration(
-                            labelText: 'Instructions / Permitted Materials (Optional)',
-                            hintText: 'e.g. 1 cheat sheet allowed, bring non-graphing calculator, 2B pencil',
-                            alignLabelWithHint: true,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -597,8 +516,6 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
 
       final duration = int.tryParse(_durationController.text.trim()) ?? 60;
       final weight = double.tryParse(_weightController.text.trim());
-      final target = double.tryParse(_targetGradeController.text.trim());
-      final actual = double.tryParse(_actualGradeController.text.trim());
 
       if (isEditing) {
         await ref.read(examsProvider.notifier).updateExam(
@@ -608,15 +525,11 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
               examType: _selectedExamType,
               dateTime: combinedDateTime,
               durationMinutes: duration,
-              location: _locationController.text.trim(),
-              seatNumber: _seatController.text.trim().isNotEmpty
-                  ? _seatController.text.trim()
+              location: _locationController.text.trim().isNotEmpty
+                  ? _locationController.text.trim()
                   : null,
               syllabusTopics: _syllabusTopics,
               weightPercentage: weight,
-              targetGrade: target,
-              actualGrade: actual,
-              notes: _notesController.text.trim(),
             );
       } else {
         await ref.read(examsProvider.notifier).createExam(
@@ -626,14 +539,8 @@ class _CreateEditExamDialogState extends ConsumerState<CreateEditExamDialog> {
               dateTime: combinedDateTime,
               durationMinutes: duration,
               location: _locationController.text.trim(),
-              seatNumber: _seatController.text.trim().isNotEmpty
-                  ? _seatController.text.trim()
-                  : null,
               syllabusTopics: _syllabusTopics,
               weightPercentage: weight,
-              targetGrade: target,
-              actualGrade: actual,
-              notes: _notesController.text.trim(),
             );
       }
 

@@ -19,17 +19,20 @@ class FileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final typeColor = file.fileType.color;
     final dateStr = DateFormat('MMM d, yyyy').format(file.createdAt);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.02),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -54,7 +57,7 @@ class FileCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: typeColor.withValues(alpha: 0.12),
+                        color: typeColor.withValues(alpha: isDark ? 0.2 : 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(file.fileType.iconData, color: typeColor, size: 24),
@@ -65,7 +68,7 @@ class FileCard extends StatelessWidget {
                         IconButton(
                           icon: Icon(
                             file.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                            color: file.isFavorite ? AppColors.warning : AppColors.lightTextMuted,
+                            color: file.isFavorite ? AppColors.warning : (isDark ? const Color(0xFF64748B) : AppColors.lightTextMuted),
                             size: 20,
                           ),
                           onPressed: onFavoriteToggle,
@@ -75,7 +78,7 @@ class FileCard extends StatelessWidget {
                         if (onDelete != null) ...[
                           const SizedBox(width: 4),
                           PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppColors.lightTextMuted),
+                            icon: Icon(Icons.more_vert_rounded, size: 18, color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextMuted),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onSelected: (val) {
@@ -108,10 +111,11 @@ class FileCard extends StatelessWidget {
                   children: [
                     Text(
                       file.originalName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                         height: 1.2,
+                        color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -125,7 +129,7 @@ class FileCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: typeColor.withValues(alpha: 0.1),
+                            color: typeColor.withValues(alpha: isDark ? 0.2 : 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -139,9 +143,9 @@ class FileCard extends StatelessWidget {
                         ),
                         Text(
                           file.sizeFormatted,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.lightTextSecondary,
+                            color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -155,9 +159,9 @@ class FileCard extends StatelessWidget {
                 // Date
                 Text(
                   dateStr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.lightTextMuted,
+                    color: isDark ? const Color(0xFF64748B) : AppColors.lightTextMuted,
                   ),
                 ),
               ],

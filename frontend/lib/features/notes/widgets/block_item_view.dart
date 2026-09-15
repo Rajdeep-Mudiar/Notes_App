@@ -8,6 +8,7 @@ class BlockItemView extends StatelessWidget {
   final int totalBlocks;
   final ValueChanged<String> onContentChanged;
   final ValueChanged<Map<String, dynamic>> onPropertiesChanged;
+  final ValueChanged<String>? onSlashCommand;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
   final VoidCallback onDelete;
@@ -19,13 +20,25 @@ class BlockItemView extends StatelessWidget {
     required this.totalBlocks,
     required this.onContentChanged,
     required this.onPropertiesChanged,
+    this.onSlashCommand,
     required this.onMoveUp,
     required this.onMoveDown,
     required this.onDelete,
   });
 
+  void _handleTextChange(String val) {
+    onContentChanged(val);
+    if (val.contains('/') && onSlashCommand != null) {
+      final slashIndex = val.lastIndexOf('/');
+      final query = val.substring(slashIndex);
+      onSlashCommand!(query);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
@@ -39,15 +52,30 @@ class BlockItemView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8, right: 4),
             child: PopupMenuButton<String>(
-              icon: const Icon(Icons.drag_indicator_rounded, size: 18, color: AppColors.lightTextMuted),
+              icon: Icon(
+                Icons.drag_indicator_rounded,
+                size: 18,
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               onSelected: (val) {
+                if (val == 'slash' && onSlashCommand != null) onSlashCommand!('/');
                 if (val == 'up') onMoveUp();
                 if (val == 'down') onMoveDown();
                 if (val == 'delete') onDelete();
               },
               itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'slash',
+                  child: Row(
+                    children: [
+                      Icon(Icons.tune_rounded, size: 16, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text('Transform / Slash Menu'),
+                    ],
+                  ),
+                ),
                 if (index > 0)
                   const PopupMenuItem(
                     value: 'up',
@@ -86,26 +114,41 @@ class BlockItemView extends StatelessWidget {
 
           // Block Content View
           Expanded(
-            child: _buildBlockBody(context),
+            child: _buildBlockBody(context, isDark),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBlockBody(BuildContext context) {
+  Widget _buildBlockBody(BuildContext context, bool isDark) {
+    final textStyle = TextStyle(
+      fontSize: 14,
+      height: 1.5,
+      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+    );
+    final hintStyle = TextStyle(
+      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+    );
+
     switch (block.type) {
       case BlockType.heading1:
         return TextFormField(
           initialValue: block.content,
-          onChanged: onContentChanged,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
-          decoration: const InputDecoration(
+          onChanged: _handleTextChange,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            height: 1.3,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          ),
+          decoration: InputDecoration(
             hintText: 'Heading 1',
+            hintStyle: hintStyle.copyWith(fontSize: 24, fontWeight: FontWeight.bold),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(vertical: 4),
             filled: false,
           ),
           maxLines: null,
@@ -114,14 +157,20 @@ class BlockItemView extends StatelessWidget {
       case BlockType.heading2:
         return TextFormField(
           initialValue: block.content,
-          onChanged: onContentChanged,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.3),
-          decoration: const InputDecoration(
+          onChanged: _handleTextChange,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            height: 1.3,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          ),
+          decoration: InputDecoration(
             hintText: 'Heading 2',
+            hintStyle: hintStyle.copyWith(fontSize: 20, fontWeight: FontWeight.bold),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(vertical: 4),
             filled: false,
           ),
           maxLines: null,
@@ -130,14 +179,20 @@ class BlockItemView extends StatelessWidget {
       case BlockType.heading3:
         return TextFormField(
           initialValue: block.content,
-          onChanged: onContentChanged,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.3),
-          decoration: const InputDecoration(
+          onChanged: _handleTextChange,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          ),
+          decoration: InputDecoration(
             hintText: 'Heading 3',
+            hintStyle: hintStyle.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(vertical: 4),
             filled: false,
           ),
           maxLines: null,
@@ -150,6 +205,7 @@ class BlockItemView extends StatelessWidget {
           children: [
             Checkbox(
               value: isChecked,
+              activeColor: AppColors.primary,
               onChanged: (val) {
                 final props = Map<String, dynamic>.from(block.properties);
                 props['checked'] = val ?? false;
@@ -159,18 +215,21 @@ class BlockItemView extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 initialValue: block.content,
-                onChanged: onContentChanged,
+                onChanged: _handleTextChange,
                 style: TextStyle(
                   fontSize: 14,
                   decoration: isChecked ? TextDecoration.lineThrough : null,
-                  color: isChecked ? AppColors.lightTextMuted : AppColors.lightTextPrimary,
+                  color: isChecked
+                      ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
+                      : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'To-do item...',
+                  hintStyle: hintStyle,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   filled: false,
                 ),
                 maxLines: null,
@@ -190,14 +249,15 @@ class BlockItemView extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 initialValue: block.content,
-                onChanged: onContentChanged,
-                style: const TextStyle(fontSize: 14, height: 1.4),
-                decoration: const InputDecoration(
+                onChanged: _handleTextChange,
+                style: textStyle,
+                decoration: InputDecoration(
                   hintText: 'List item...',
+                  hintStyle: hintStyle,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
                   filled: false,
                 ),
                 maxLines: null,
@@ -220,14 +280,15 @@ class BlockItemView extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 initialValue: block.content,
-                onChanged: onContentChanged,
-                style: const TextStyle(fontSize: 14, height: 1.4),
-                decoration: const InputDecoration(
+                onChanged: _handleTextChange,
+                style: textStyle,
+                decoration: InputDecoration(
                   hintText: 'Step...',
+                  hintStyle: hintStyle,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
                   filled: false,
                 ),
                 maxLines: null,
@@ -244,14 +305,19 @@ class BlockItemView extends StatelessWidget {
           ),
           child: TextFormField(
             initialValue: block.content,
-            onChanged: onContentChanged,
-            style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: AppColors.lightTextSecondary),
-            decoration: const InputDecoration(
+            onChanged: _handleTextChange,
+            style: TextStyle(
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+            ),
+            decoration: InputDecoration(
               hintText: 'Quote text...',
+              hintStyle: hintStyle,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: 4),
+              contentPadding: const EdgeInsets.symmetric(vertical: 4),
               filled: false,
             ),
             maxLines: null,
@@ -273,7 +339,7 @@ class BlockItemView extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: calloutColor.withValues(alpha: 0.08),
+            color: calloutColor.withValues(alpha: isDark ? 0.15 : 0.08),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: calloutColor.withValues(alpha: 0.3)),
           ),
@@ -285,10 +351,15 @@ class BlockItemView extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   initialValue: block.content,
-                  onChanged: onContentChanged,
-                  style: const TextStyle(fontSize: 13, height: 1.4),
-                  decoration: const InputDecoration(
+                  onChanged: _handleTextChange,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                  decoration: InputDecoration(
                     hintText: 'Important note or reminder...',
+                    hintStyle: hintStyle,
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -307,8 +378,9 @@ class BlockItemView extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
+            color: isDark ? const Color(0xFF0B0F19) : const Color(0xFF0F172A),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: isDark ? AppColors.darkBorder : Colors.transparent),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +405,7 @@ class BlockItemView extends StatelessWidget {
               const SizedBox(height: 8),
               TextFormField(
                 initialValue: block.content,
-                onChanged: onContentChanged,
+                onChanged: _handleTextChange,
                 style: const TextStyle(
                   fontFamily: 'Courier',
                   fontSize: 13,
@@ -359,9 +431,9 @@ class BlockItemView extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFFDF2F8),
+            color: isDark ? const Color(0xFF831843).withValues(alpha: 0.2) : const Color(0xFFFDF2F8),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFFBCFE8)),
+            border: Border.all(color: const Color(0xFFFBCFE8).withValues(alpha: isDark ? 0.3 : 1.0)),
           ),
           child: Row(
             children: [
@@ -370,15 +442,16 @@ class BlockItemView extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   initialValue: block.content,
-                  onChanged: onContentChanged,
-                  style: const TextStyle(
+                  onChanged: _handleTextChange,
+                  style: TextStyle(
                     fontFamily: 'Courier',
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF9D174D),
+                    color: isDark ? const Color(0xFFF472B6) : const Color(0xFF9D174D),
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: r'LaTeX: e.g. T(n) = 2T(n/2) + O(1)',
+                    hintStyle: hintStyle,
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -392,23 +465,27 @@ class BlockItemView extends StatelessWidget {
         );
 
       case BlockType.divider:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Divider(thickness: 1.5, color: AppColors.lightBorder),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Divider(
+            thickness: 1.5,
+            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          ),
         );
 
       case BlockType.paragraph:
       default:
         return TextFormField(
           initialValue: block.content,
-          onChanged: onContentChanged,
-          style: const TextStyle(fontSize: 14, height: 1.5),
-          decoration: const InputDecoration(
-            hintText: 'Type something or add blocks...',
+          onChanged: _handleTextChange,
+          style: textStyle,
+          decoration: InputDecoration(
+            hintText: "Type '/' for component commands, or start writing...",
+            hintStyle: hintStyle,
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(vertical: 4),
             filled: false,
           ),
           maxLines: null,

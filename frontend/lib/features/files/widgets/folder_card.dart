@@ -16,6 +16,8 @@ class FolderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -24,12 +26,14 @@ class FolderCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.lightBorder),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.02),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -40,7 +44,7 @@ class FolderCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: folder.color.withValues(alpha: 0.12),
+                  color: folder.color.withValues(alpha: isDark ? 0.2 : 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(Icons.folder_rounded, color: folder.color, size: 24),
@@ -53,21 +57,28 @@ class FolderCard extends StatelessWidget {
                   children: [
                     Text(
                       folder.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${folder.itemsCount} ${folder.itemsCount == 1 ? "item" : "items"}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.lightTextSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
               if (onDelete != null)
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppColors.lightTextMuted),
+                  icon: Icon(Icons.more_vert_rounded, size: 18, color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextMuted),
                   padding: EdgeInsets.zero,
                   onSelected: (val) {
                     if (val == 'delete') onDelete?.call();

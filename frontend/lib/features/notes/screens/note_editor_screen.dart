@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:frontend/core/theme/app_colors.dart';
 import 'package:frontend/features/notes/models/note_model.dart';
 import 'package:frontend/features/notes/providers/notes_provider.dart';
-import 'package:frontend/features/notes/widgets/block_adder_modal.dart';
 import 'package:frontend/features/notes/widgets/block_item_view.dart';
+import 'package:frontend/features/notes/widgets/slash_command_palette.dart';
 import 'package:frontend/features/subjects/providers/subjects_provider.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
@@ -44,8 +44,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (_noteId != null && _noteId != 'new') {
       _loadExistingNote(_noteId!);
     } else {
-      // Start completely empty by default
-      _blocks = [];
+      // Start with a clean initial paragraph block ready for writing
+      _blocks = [
+        NoteBlockModel(
+          id: 'b_${DateTime.now().millisecondsSinceEpoch}_0',
+          type: BlockType.paragraph,
+          content: '',
+          properties: {},
+          order: 0,
+        ),
+      ];
     }
   }
 
@@ -64,7 +72,17 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         _titleController.text = note.title;
         _selectedSubjectId = note.subjectId;
         _tags = List.from(note.tags);
-        _blocks = List.from(note.blocks);
+        _blocks = note.blocks.isNotEmpty
+            ? List.from(note.blocks)
+            : [
+                NoteBlockModel(
+                  id: 'b_${DateTime.now().millisecondsSinceEpoch}_0',
+                  type: BlockType.paragraph,
+                  content: '',
+                  properties: {},
+                  order: 0,
+                ),
+              ];
         _isFavorite = note.isFavorite;
         _isPinned = note.isPinned;
         _isLoading = false;
@@ -79,7 +97,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     }
   }
 
-  void _addBlock(BlockType type) {
+  void _addBlock(BlockType type, [int? insertIndex]) {
     final newBlock = NoteBlockModel(
       id: 'b_${DateTime.now().millisecondsSinceEpoch}_${_blocks.length}',
       type: type,
@@ -87,12 +105,35 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       properties: type == BlockType.callout
           ? {'type': 'info', 'icon': 'info'}
           : (type == BlockType.code ? {'language': 'python'} : {}),
-      order: _blocks.length,
+      order: insertIndex ?? _blocks.length,
     );
     setState(() {
-      _blocks.add(newBlock);
+      if (insertIndex != null && insertIndex >= 0 && insertIndex <= _blocks.length) {
+        _blocks.insert(insertIndex, newBlock);
+      } else {
+        _blocks.add(newBlock);
+      }
       _hasUnsavedChanges = true;
     });
+  }
+
+  Future<void> _handleSlashCommand(int index, String query) async {
+    final selectedType = await SlashCommandPalette.show(context, initialQuery: query);
+    if (selectedType != null && mounted) {
+      setState(() {
+        final current = _blocks[index];
+        // Clean out slash command trigger from content
+        final cleanContent = current.content.replaceAll(RegExp(r'/[a-zA-Z0-9_-]*$'), '').trim();
+        _blocks[index] = current.copyWith(
+          type: selectedType,
+          content: cleanContent,
+          properties: selectedType == BlockType.callout
+              ? {'type': 'info', 'icon': 'info'}
+              : (selectedType == BlockType.code ? {'language': 'python'} : {}),
+        );
+        _hasUnsavedChanges = true;
+      });
+    }
   }
 
   void _moveBlock(int oldIndex, int newIndex) {
@@ -188,6 +229,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final subjectsAsync = ref.watch(subjectsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_isLoading) {
       return const Scaffold(
@@ -400,6 +442,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                                   _blocks[index] = block.copyWith(content: newContent);
                                   _hasUnsavedChanges = true;
                                 },
+                                onSlashCommand: (query) => _handleSlashCommand(index, query),
                                 onPropertiesChanged: (newProps) {
                                   _blocks[index] = block.copyWith(properties: newProps);
                                   _hasUnsavedChanges = true;
@@ -411,25 +454,23 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                             );
                           },
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
 
-                        // Add Block Trigger Button
-                        Center(
-                          child: OutlinedButton.icon(
-                            onPressed: () async {
-                              final type = await BlockAdderModal.show(context);
-                              if (type != null) _addBlock(type);
-                            },
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('Add Content Block'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: const BorderSide(color: AppColors.lightBorder),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        // Subtle Slash Hint
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Center(
+                            child: Text(
+                              'Type  /  anywhere to search and insert components',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 60),
+                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
@@ -441,13 +482,17 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: const Border(top: BorderSide(color: AppColors.lightBorder)),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+                  ),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                     blurRadius: 10,
-                    offset: const Offset(0, -4),
+                    offset: const Offset(0, -3),
                   ),
                 ],
               ),
@@ -455,23 +500,39 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildQuickAddChip(Icons.notes_rounded, 'Text', BlockType.paragraph),
-                    _buildQuickAddChip(Icons.format_size_rounded, 'H1', BlockType.heading1),
-                    _buildQuickAddChip(Icons.title_rounded, 'H2', BlockType.heading2),
-                    _buildQuickAddChip(Icons.check_box_outlined, 'Checklist', BlockType.checklist),
-                    _buildQuickAddChip(Icons.format_list_bulleted_rounded, 'Bullets', BlockType.bulletList),
-                    _buildQuickAddChip(Icons.code_rounded, 'Code', BlockType.code),
-                    _buildQuickAddChip(Icons.lightbulb_outline_rounded, 'Callout', BlockType.callout),
-                    _buildQuickAddChip(Icons.functions_rounded, 'Equation', BlockType.equation),
-                    _buildQuickAddChip(Icons.horizontal_rule_rounded, 'Divider', BlockType.divider),
-                    IconButton(
-                      tooltip: 'More Blocks...',
-                      icon: const Icon(Icons.more_horiz_rounded, color: AppColors.primary),
-                      onPressed: () async {
-                        final type = await BlockAdderModal.show(context);
-                        if (type != null) _addBlock(type);
-                      },
+                    // Slash Menu Trigger
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ActionChip(
+                        avatar: const Icon(Icons.flash_on_rounded, size: 16, color: Colors.white),
+                        label: const Text(
+                          '/ Components',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        backgroundColor: AppColors.primary,
+                        onPressed: () async {
+                          final lastIdx = _blocks.isEmpty ? 0 : _blocks.length - 1;
+                          final selectedType = await SlashCommandPalette.show(context);
+                          if (selectedType != null) {
+                            if (_blocks.isEmpty) {
+                              _addBlock(selectedType);
+                            } else {
+                              _handleSlashCommand(lastIdx, '');
+                            }
+                          }
+                        },
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ),
+                    _buildQuickAddChip(Icons.notes_rounded, 'Text', BlockType.paragraph, isDark),
+                    _buildQuickAddChip(Icons.format_size_rounded, 'H1', BlockType.heading1, isDark),
+                    _buildQuickAddChip(Icons.title_rounded, 'H2', BlockType.heading2, isDark),
+                    _buildQuickAddChip(Icons.check_box_outlined, 'Checklist', BlockType.checklist, isDark),
+                    _buildQuickAddChip(Icons.format_list_bulleted_rounded, 'Bullets', BlockType.bulletList, isDark),
+                    _buildQuickAddChip(Icons.code_rounded, 'Code', BlockType.code, isDark),
+                    _buildQuickAddChip(Icons.lightbulb_outline_rounded, 'Callout', BlockType.callout, isDark),
+                    _buildQuickAddChip(Icons.functions_rounded, 'Equation', BlockType.equation, isDark),
+                    _buildQuickAddChip(Icons.horizontal_rule_rounded, 'Divider', BlockType.divider, isDark),
                   ],
                 ),
               ),
@@ -482,12 +543,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
   }
 
-  Widget _buildQuickAddChip(IconData icon, String label, BlockType type) {
+  Widget _buildQuickAddChip(IconData icon, String label, BlockType type, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: ActionChip(
-        avatar: Icon(icon, size: 16, color: AppColors.primary),
-        label: Text(label, style: const TextStyle(fontSize: 12)),
+        avatar: Icon(icon, size: 16, color: isDark ? const Color(0xFF93C5FD) : AppColors.primary),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+          ),
+        ),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
         onPressed: () => _addBlock(type),
         visualDensity: VisualDensity.compact,
       ),

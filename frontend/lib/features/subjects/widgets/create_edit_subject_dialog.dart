@@ -134,9 +134,11 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEditing = widget.existingSubject != null;
 
     return Dialog(
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -154,7 +156,11 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
                   children: [
                     Text(
                       isEditing ? 'Edit Subject' : 'Add New Subject',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded, size: 20),
@@ -221,6 +227,7 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
                   children: [
                     Expanded(
                       child: _buildCounterPicker(
+                        context,
                         label: 'Credits',
                         value: _credits,
                         min: 1,
@@ -231,6 +238,7 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildCounterPicker(
+                        context,
                         label: 'Semester',
                         value: _semester,
                         min: 1,
@@ -243,9 +251,13 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
                 const SizedBox(height: 16),
 
                 // Color Theme Selector
-                const Text(
+                Text(
                   'Color Theme',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.lightTextSecondary),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -262,8 +274,8 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
                           color: color,
                           shape: BoxShape.circle,
                           border: isSelected
-                              ? Border.all(color: Colors.black, width: 2.5)
-                              : Border.all(color: Colors.black12, width: 1),
+                              ? Border.all(color: isDark ? Colors.white : Colors.black, width: 2.5)
+                              : Border.all(color: isDark ? Colors.white24 : Colors.black12, width: 1),
                         ),
                         child: isSelected
                             ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
@@ -275,9 +287,13 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
                 const SizedBox(height: 16),
 
                 // Icon Selector
-                const Text(
+                Text(
                   'Subject Category Icon',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.lightTextSecondary),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -321,27 +337,35 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
     );
   }
 
-  Widget _buildCounterPicker({
+  Widget _buildCounterPicker(
+    BuildContext context, {
     required String label,
     required int value,
     required int min,
     required int max,
     required ValueChanged<int> onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.lightTextSecondary),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+          ),
         ),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF0F172A) : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.lightBorder),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -354,7 +378,11 @@ class _CreateEditSubjectDialogState extends ConsumerState<CreateEditSubjectDialo
               ),
               Text(
                 '$value',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.add_rounded, size: 18),
