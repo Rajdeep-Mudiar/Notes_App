@@ -57,6 +57,7 @@ class NotesListNotifier extends StateNotifier<AsyncValue<List<NoteSummaryModel>>
 }
 
 final notesListProvider = StateNotifierProvider<NotesListNotifier, AsyncValue<List<NoteSummaryModel>>>((ref) {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(noteRepositoryProvider);
   return NotesListNotifier(repository, ref);
 });

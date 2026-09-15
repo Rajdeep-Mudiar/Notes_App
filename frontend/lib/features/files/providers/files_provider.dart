@@ -16,10 +16,14 @@ final fileSubjectFilterProvider = StateProvider<String?>((ref) => null);
 final fileFavoriteFilterProvider = StateProvider<bool?>((ref) => null);
 
 // Folder navigation stack: empty list = Root
-final folderNavStackProvider = StateProvider<List<FolderModel>>((ref) => []);
+final folderNavStackProvider = StateProvider<List<FolderModel>>((ref) {
+  ref.watch(currentUserProvider);
+  return [];
+});
 
 // Main files and folders provider
 final filesListProvider = FutureProvider.autoDispose<FileListResponseModel>((ref) async {
+  ref.watch(currentUserProvider);
   final repo = ref.watch(fileRepositoryProvider);
   final subjectId = ref.watch(fileSubjectFilterProvider);
   final fileType = ref.watch(activeFileTypeFilterProvider);

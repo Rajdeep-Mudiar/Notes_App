@@ -8,10 +8,8 @@ import 'package:frontend/core/theme/text_styles.dart';
 import 'package:frontend/core/theme/theme_provider.dart';
 import 'package:frontend/core/utils/validators.dart';
 import 'package:frontend/core/services/app_update_service.dart';
-import 'package:frontend/features/analytics/providers/analytics_provider.dart';
 import 'package:frontend/features/auth/models/user_model.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
-import 'package:frontend/features/subjects/providers/subjects_provider.dart';
 import 'package:frontend/shared/widgets/app_update_dialog.dart';
 import 'package:frontend/shared/widgets/custom_button.dart';
 import 'package:frontend/shared/widgets/custom_text_field.dart';
@@ -23,9 +21,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final gpaSummaryAsync = ref.watch(gpaSummaryProvider);
-    final academicSummaryAsync = ref.watch(academicSummaryProvider);
-    final healthAsync = ref.watch(backendHealthProvider);
+    final selectedColor = ref.watch(themeColorProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -226,53 +222,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // 2. Academic Summary Overview
-                  Text('Academic Summary', style: AppTextStyles.titleMedium(context)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildMetricTile(
-                          context,
-                          title: 'Current CGPA',
-                          value: gpaSummaryAsync.when(
-                            data: (g) => g.currentCgpa.toStringAsFixed(2),
-                            loading: () => '...',
-                            error: (_, __) => 'N/A',
-                          ),
-                          subtitle: gpaSummaryAsync.when(
-                            data: (g) => g.honorsStanding,
-                            loading: () => 'Loading',
-                            error: (_, __) => 'Academic Record',
-                          ),
-                          icon: Icons.insights_rounded,
-                          color: const Color(0xFF6366F1),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildMetricTile(
-                          context,
-                          title: 'Credits Completed',
-                          value: academicSummaryAsync.when(
-                            data: (s) => '${s.totalCredits}',
-                            loading: () => '...',
-                            error: (_, __) => '0',
-                          ),
-                          subtitle: academicSummaryAsync.when(
-                            data: (s) => '${s.totalSubjects} Enrolled Courses',
-                            loading: () => 'Active courses',
-                            error: (_, __) => 'Enrolled',
-                          ),
-                          icon: Icons.menu_book_rounded,
-                          color: const Color(0xFF10B981),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-
-                  // 3. Appearance & Theme Settings
+                  // 2. Appearance & Theme Settings
                   Text('Appearance & Theme', style: AppTextStyles.titleMedium(context)),
                   const SizedBox(height: 12),
                   Container(
@@ -288,13 +238,13 @@ class ProfileScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Choose your workspace color theme',
+                          'Display Mode',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.lightTextSecondary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
@@ -331,12 +281,62 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 20),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Primary Accent Color',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: ThemeColorPalette.colors.map((color) {
+                            final isSelected = selectedColor.toARGB32() == color.toARGB32();
+                            return InkWell(
+                              onTap: () {
+                                ref.read(themeColorProvider.notifier).setThemeColor(color);
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected ? Colors.white : Colors.transparent,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color.withValues(alpha: isSelected ? 0.45 : 0.2),
+                                      blurRadius: isSelected ? 10 : 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: isSelected
+                                    ? const Icon(
+                                        Icons.check_rounded,
+                                        color: Colors.white,
+                                        size: 22,
+                                      )
+                                    : null,
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 28),
 
-                  // 4. App Updates & Version Info
+                  // 3. App Updates & Version Info
                   Text('App Releases & Updates', style: AppTextStyles.titleMedium(context)),
                   const SizedBox(height: 12),
                   Container(
@@ -413,61 +413,6 @@ class ProfileScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 28),
-
-                  // 5. System & Server Diagnostics (relocated from dashboard)
-                  Text('System & Diagnostics', style: AppTextStyles.titleMedium(context)),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        healthAsync.when(
-                          data: (health) => Column(
-                            children: [
-                              _buildDiagnosticRow(
-                                title: 'FastAPI Backend Server',
-                                value: health['status'] == 'healthy' ? 'Operational' : 'Offline',
-                                isPositive: health['status'] == 'healthy',
-                                icon: Icons.api_rounded,
-                              ),
-                              const Divider(height: 20),
-                              _buildDiagnosticRow(
-                                title: 'MongoDB Database Connection',
-                                value: health['mongodb'] == 'connected' ? 'Connected (Atlas/Local)' : 'Disconnected',
-                                isPositive: health['mongodb'] == 'connected',
-                                icon: Icons.storage_rounded,
-                              ),
-                              const Divider(height: 20),
-                              _buildDiagnosticRow(
-                                title: 'API Gateway Base URL',
-                                value: ApiEndpoints.baseUrl,
-                                isPositive: true,
-                                icon: Icons.link_rounded,
-                              ),
-                            ],
-                          ),
-                          loading: () => const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(12),
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
-                          error: (err, _) => Text(
-                            'Diagnostics Error: $err',
-                            style: const TextStyle(color: AppColors.error, fontSize: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 32),
 
                   // 5. Account Actions & Logout
@@ -483,59 +428,6 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildMetricTile(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
       ),
     );
   }
@@ -584,38 +476,6 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDiagnosticRow({
-    required String title,
-    required String value,
-    required bool isPositive,
-    required IconData icon,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: isPositive ? AppColors.success : AppColors.error),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isPositive ? AppColors.success : AppColors.error,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

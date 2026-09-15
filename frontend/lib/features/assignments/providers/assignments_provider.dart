@@ -167,6 +167,7 @@ class AssignmentsNotifier extends StateNotifier<AsyncValue<AssignmentListRespons
 }
 
 final assignmentsProvider = StateNotifierProvider<AssignmentsNotifier, AsyncValue<AssignmentListResponseModel>>((ref) {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(assignmentRepositoryProvider);
   return AssignmentsNotifier(repository, ref);
 });

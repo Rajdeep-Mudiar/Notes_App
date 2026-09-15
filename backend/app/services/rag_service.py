@@ -38,7 +38,7 @@ class RagService:
         ingestion_service: IngestionService,
         ai_repo: AiRepository,
         groq_api_keys: Optional[str] = None,
-        groq_model: str = "llama-3.3-70b-versatile",
+        groq_model: str = "qwen/qwen3.8-27b",
         gemini_api_key: Optional[str] = None,
         hf_api_key: Optional[str] = None,
         hf_chat_model: str = "meta-llama/Llama-3.2-3B-Instruct",
@@ -46,7 +46,7 @@ class RagService:
         self.ingestion_service = ingestion_service
         self.ai_repo = ai_repo
         self.groq_keys = [k.strip() for k in (groq_api_keys or "").split(",") if k.strip()]
-        self.groq_model = groq_model or "llama-3.3-70b-versatile"
+        self.groq_model = groq_model or "qwen/qwen3.8-27b"
         self.gemini_api_key = gemini_api_key
         self.hf_api_key = hf_api_key
         self.hf_chat_model = hf_chat_model or "meta-llama/Llama-3.2-3B-Instruct"
@@ -128,10 +128,11 @@ class RagService:
     ) -> str:
         """Generate response via LLM (Gemini / HF) or dynamic grounded synthesis."""
         system_instruction = (
-            "You are Student OS AI, an intelligent, encouraging academic study assistant for university students. "
-            "Your task is to answer the student's question accurately using the provided course material excerpts. "
-            "Cite sources cleanly in the format [Source Name, Page/Section]. Use markdown with clear headings, bullet points, "
-            "and code/math blocks. If the excerpts don't contain the answer, answer helpfully with academic principles and mention this."
+            "You are Notoo AI, an intelligent, friendly, and encouraging academic study assistant for university students. "
+            "Your task is to answer the student's questions clearly, accurately, and thoroughly. "
+            "When course excerpts are provided, cite sources cleanly in the format [Source Name, Page/Section]. "
+            "Use clean markdown with clear headings, bullet points, and code/math blocks. "
+            "If the student asks a general question, greeting, or concept question without indexed files, answer helpfully with clear academic principles."
         )
 
         context_str = "\n\n".join(context_blocks) if context_blocks else "No specific course excerpts indexed for this query."
@@ -639,40 +640,50 @@ class RagService:
             payload["response_format"] = {"type": "json_object"}
 
         num_keys = len(self.groq_keys)
-        # Try each key in the pool in round-robin order
-        for attempt in range(num_keys):
-            idx = (RagService._groq_index + attempt) % num_keys
-            api_key = self.groq_keys[idx]
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            }
-            try:
-                resp = requests.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=15,
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    choices = data.get("choices", [])
-                    if choices:
-                        content = choices[0].get("message", {}).get("content", "")
-                        if content and len(content.strip()) > 0:
-                            # Successfully used key, advance round-robin index for next call
-                            RagService._groq_index = (idx + 1) % num_keys
-                            return content.strip()
-                elif resp.status_code in (429, 401, 503):
-                    logger.warning(
-                        f"Groq API key #{idx + 1} returned HTTP {resp.status_code}, rotating to next key in pool..."
+        candidate_models = [self.groq_model]
+        for m in ["qwen/qwen3.8-27b", "groq/compound-mini"]:
+            if m not in candidate_models:
+                candidate_models.append(m)
+
+        for model_name in candidate_models:
+            payload["model"] = model_name
+            # Try each key in the pool in round-robin order
+            for attempt in range(num_keys):
+                idx = (RagService._groq_index + attempt) % num_keys
+                api_key = self.groq_keys[idx]
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                try:
+                    resp = requests.post(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        headers=headers,
+                        json=payload,
+                        timeout=15,
                     )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        choices = data.get("choices", [])
+                        if choices:
+                            content = choices[0].get("message", {}).get("content", "")
+                            if content and len(content.strip()) > 0:
+                                # Successfully used key, advance round-robin index for next call
+                                RagService._groq_index = (idx + 1) % num_keys
+                                return content.strip()
+                    elif resp.status_code in (429, 401, 503):
+                        logger.warning(
+                            f"Groq API key #{idx + 1} returned HTTP {resp.status_code}, rotating to next key in pool..."
+                        )
+                        continue
+                    elif resp.status_code in (404, 400):
+                        logger.warning(f"Groq model '{model_name}' returned HTTP {resp.status_code}, trying next model...")
+                        break
+                    else:
+                        logger.warning(f"Groq API error (status {resp.status_code}): {resp.text[:200]}")
+                except Exception as e:
+                    logger.warning(f"Groq API request with key #{idx + 1} failed: {e}")
                     continue
-                else:
-                    logger.warning(f"Groq API error (status {resp.status_code}): {resp.text[:200]}")
-            except Exception as e:
-                logger.warning(f"Groq API request with key #{idx + 1} failed: {e}")
-                continue
 
         return None
 

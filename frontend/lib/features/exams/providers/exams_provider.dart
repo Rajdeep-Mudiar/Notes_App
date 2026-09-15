@@ -143,6 +143,7 @@ class ExamsNotifier extends StateNotifier<AsyncValue<ExamListResponseModel>> {
 }
 
 final examsProvider = StateNotifierProvider<ExamsNotifier, AsyncValue<ExamListResponseModel>>((ref) {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(examRepositoryProvider);
   return ExamsNotifier(repository, ref);
 });

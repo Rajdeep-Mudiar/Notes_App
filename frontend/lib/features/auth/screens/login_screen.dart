@@ -26,7 +26,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.disposeNavigator();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -43,11 +42,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.go(RouteNames.home);
       }
     }
-  }
-
-  void _fillSampleCredentials() {
-    _emailController.text = 'alex.rivera@stanford.edu';
-    _passwordController.text = 'Student123!';
   }
 
   @override
@@ -252,24 +246,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     // Google Sign-In Button
                     const GoogleSignInButton(label: 'Continue with Google'),
-                    const SizedBox(height: 14),
-
-                    // Sample Autofill Button for quick testing
-                    OutlinedButton.icon(
-                      onPressed: _fillSampleCredentials,
-                      icon: const Icon(Icons.flash_on_rounded, size: 16),
-                      label: const Text(
-                        'Autofill Sample Student',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.lightTextSecondary,
-                        side: const BorderSide(color: AppColors.lightBorder),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
                     const SizedBox(height: 28),
 
                     // Register Link
@@ -313,8 +289,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-}
-
-extension on TextEditingController {
-  void disposeNavigator() {}
 }

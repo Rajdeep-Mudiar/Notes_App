@@ -13,9 +13,9 @@ class ApiClient {
             Dio(
               BaseOptions(
                 baseUrl: ApiEndpoints.baseUrl,
-                connectTimeout: const Duration(seconds: 6),
-                receiveTimeout: const Duration(seconds: 6),
-                sendTimeout: const Duration(seconds: 6),
+                connectTimeout: const Duration(seconds: 20),
+                receiveTimeout: const Duration(seconds: 60),
+                sendTimeout: const Duration(seconds: 30),
               ),
             ) {
     dio.interceptors.add(AuthInterceptor(storage));

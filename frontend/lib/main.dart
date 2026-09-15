@@ -36,12 +36,13 @@ class StudentOSApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final themeColor = ref.watch(themeColorProvider);
 
     return MaterialApp.router(
       title: 'Notoo',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.getLightTheme(themeColor),
+      darkTheme: AppTheme.getDarkTheme(themeColor),
       themeMode: themeMode,
       routerConfig: router,
     );

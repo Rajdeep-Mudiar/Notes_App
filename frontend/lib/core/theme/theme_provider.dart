@@ -50,3 +50,40 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((r
   final storage = ref.watch(storageServiceProvider);
   return ThemeModeNotifier(storage);
 });
+
+class ThemeColorPalette {
+  static const List<Color> colors = [
+    Color(0xFF4F46E5), // Indigo (Default)
+    Color(0xFF7C3AED), // Violet Purple
+    Color(0xFF0EA5E9), // Ocean Sky
+    Color(0xFF059669), // Emerald Green
+    Color(0xFFE11D48), // Crimson Rose
+    Color(0xFFEA580C), // Sunset Orange
+    Color(0xFF0D9488), // Midnight Teal
+    Color(0xFFD97706), // Amber Gold
+  ];
+}
+
+class ThemeColorNotifier extends StateNotifier<Color> {
+  final StorageService _storage;
+
+  ThemeColorNotifier(this._storage) : super(_loadInitialColor(_storage));
+
+  static Color _loadInitialColor(StorageService storage) {
+    final saved = storage.getThemeColor();
+    if (saved != null) {
+      return Color(saved);
+    }
+    return const Color(0xFF4F46E5);
+  }
+
+  Future<void> setThemeColor(Color color) async {
+    state = color;
+    await _storage.saveThemeColor(color.toARGB32());
+  }
+}
+
+final themeColorProvider = StateNotifierProvider<ThemeColorNotifier, Color>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return ThemeColorNotifier(storage);
+});

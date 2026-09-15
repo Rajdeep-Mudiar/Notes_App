@@ -34,6 +34,7 @@ final selectedTimetableSubjectFilterProvider = StateProvider<String?>((ref) => n
 
 // Timetable slots list provider
 final timetableSlotsProvider = FutureProvider<List<TimetableSlotModel>>((ref) async {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(timetableRepositoryProvider);
   final day = ref.watch(selectedTimetableDayProvider);
   final subjectId = ref.watch(selectedTimetableSubjectFilterProvider);
@@ -46,18 +47,21 @@ final timetableSlotsProvider = FutureProvider<List<TimetableSlotModel>>((ref) as
 
 // Weekly timetable provider
 final weeklyScheduleProvider = FutureProvider<TimetableWeeklyModel>((ref) async {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(timetableRepositoryProvider);
   return repository.getWeeklySchedule();
 });
 
 // Today's schedule provider
 final todayScheduleProvider = FutureProvider<List<TodayClassModel>>((ref) async {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(timetableRepositoryProvider);
   return repository.getTodaySchedule();
 });
 
 // Attendance summary provider
 final attendanceSummaryProvider = FutureProvider<AttendanceSummaryModel>((ref) async {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(timetableRepositoryProvider);
   return repository.getAttendanceSummary();
 });

@@ -3,16 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/core/theme/app_colors.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData getLightTheme([Color? primary]) {
+    final primaryColor = primary ?? AppColors.primary;
     final base = ThemeData.light(useMaterial3: true);
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.lightBg,
-      primaryColor: AppColors.primary,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
+      primaryColor: primaryColor,
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
         onPrimary: Colors.white,
-        primaryContainer: Color(0xFFEEF2FF),
-        onPrimaryContainer: AppColors.primaryDark,
+        primaryContainer: primaryColor.withValues(alpha: 0.12),
+        onPrimaryContainer: primaryColor,
         secondary: AppColors.secondary,
         onSecondary: Colors.white,
         error: AppColors.error,
@@ -61,7 +62,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: primaryColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -74,7 +75,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(50),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -90,16 +91,19 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
+  static ThemeData get lightTheme => getLightTheme();
+
+  static ThemeData getDarkTheme([Color? primary]) {
+    final primaryColor = primary ?? AppColors.primaryLight;
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.darkBg,
-      primaryColor: AppColors.primaryLight,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryLight,
+      primaryColor: primaryColor,
+      colorScheme: ColorScheme.dark(
+        primary: primaryColor,
         onPrimary: Colors.white,
-        primaryContainer: Color(0xFF312E81),
-        onPrimaryContainer: Color(0xFFC7D2FE),
+        primaryContainer: primaryColor.withValues(alpha: 0.2),
+        onPrimaryContainer: Colors.white,
         secondary: AppColors.secondary,
         onSecondary: Colors.white,
         error: AppColors.error,

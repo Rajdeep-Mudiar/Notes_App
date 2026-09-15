@@ -125,6 +125,7 @@ class SubjectsNotifier extends StateNotifier<AsyncValue<List<SubjectModel>>> {
 
 // Subjects List Provider
 final subjectsProvider = StateNotifierProvider<SubjectsNotifier, AsyncValue<List<SubjectModel>>>((ref) {
+  ref.watch(currentUserProvider);
   final repository = ref.watch(subjectRepositoryProvider);
   return SubjectsNotifier(repository, ref);
 });

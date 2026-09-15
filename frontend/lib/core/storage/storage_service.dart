@@ -69,6 +69,14 @@ class StorageService {
     return _prefs.getString(AppConstants.keyThemeMode) ?? 'system';
   }
 
+  Future<bool> saveThemeColor(int colorValue) async {
+    return await _prefs.setInt('custom_theme_primary_color', colorValue);
+  }
+
+  int? getThemeColor() {
+    return _prefs.getInt('custom_theme_primary_color');
+  }
+
   // Server URL Management
   Future<bool> saveServerUrl(String url) async {
     return await _prefs.setString('custom_server_url', url);
