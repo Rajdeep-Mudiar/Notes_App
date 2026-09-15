@@ -121,9 +121,11 @@ class _UploadFileDialogState extends ConsumerState<UploadFileDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final subjectsAsync = ref.watch(subjectsProvider);
 
     return Dialog(
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -144,9 +146,13 @@ class _UploadFileDialogState extends ConsumerState<UploadFileDialog> {
                     child: const Icon(Icons.cloud_upload_rounded, color: Color(0xFF10B981), size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Upload Document or File',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -160,10 +166,12 @@ class _UploadFileDialogState extends ConsumerState<UploadFileDialog> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.lightBg,
+                    color: isDark ? const Color(0xFF0F172A) : AppColors.lightBg,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: _pickedFile != null ? AppColors.primary : AppColors.lightBorder,
+                      color: _pickedFile != null
+                          ? AppColors.primary
+                          : (isDark ? const Color(0xFF334155) : AppColors.lightBorder),
                       width: _pickedFile != null ? 1.5 : 1,
                     ),
                   ),
@@ -172,14 +180,21 @@ class _UploadFileDialogState extends ConsumerState<UploadFileDialog> {
                           children: [
                             const Icon(Icons.file_upload_outlined, color: AppColors.primary, size: 36),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Click to Browse & Select File',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                              ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'PDF, PPT, DOCX, Images, Videos, Audio, ZIP',
-                              style: TextStyle(fontSize: 12, color: AppColors.lightTextSecondary),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                              ),
                             ),
                           ],
                         )
@@ -200,14 +215,21 @@ class _UploadFileDialogState extends ConsumerState<UploadFileDialog> {
                                 children: [
                                   Text(
                                     _pickedFile!.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     _formatSize(_pickedFile!.size),
-                                    style: const TextStyle(fontSize: 12, color: AppColors.lightTextSecondary),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                                    ),
                                   ),
                                 ],
                               ),

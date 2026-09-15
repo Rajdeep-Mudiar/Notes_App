@@ -20,10 +20,19 @@ class SubjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final subjectColor = subject.color;
 
     return Card(
       clipBehavior: Clip.antiAlias,
+      elevation: isDark ? 0 : 1,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -39,7 +48,7 @@ class SubjectCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: subjectColor.withValues(alpha: 0.12),
+                      color: subjectColor.withValues(alpha: isDark ? 0.2 : 0.12),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: subjectColor.withValues(alpha: 0.3),
@@ -69,10 +78,10 @@ class SubjectCard extends StatelessWidget {
                             ),
                             Text(
                               '${subject.credits} Credits',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.lightTextSecondary,
+                                color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
                               ),
                             ),
                           ],
@@ -85,6 +94,7 @@ class SubjectCard extends StatelessWidget {
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
+                            color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
                           ),
                         ),
                       ],
@@ -92,7 +102,7 @@ class SubjectCard extends StatelessWidget {
                   ),
                   if (onEdit != null || onDelete != null)
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppColors.lightTextMuted),
+                      icon: Icon(Icons.more_vert_rounded, size: 18, color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextMuted),
                       padding: EdgeInsets.zero,
                       onSelected: (val) {
                         if (val == 'edit' && onEdit != null) onEdit!();
@@ -129,17 +139,17 @@ class SubjectCard extends StatelessWidget {
               if (subject.professor.isNotEmpty && subject.professor != 'TBD') ...[
                 Row(
                   children: [
-                    const Icon(Icons.person_outline_rounded, size: 14, color: AppColors.lightTextSecondary),
+                    Icon(Icons.person_outline_rounded, size: 14, color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         subject.professor,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.lightTextSecondary,
+                          color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
                         ),
                       ),
                     ),
@@ -148,21 +158,24 @@ class SubjectCard extends StatelessWidget {
                 const SizedBox(height: 8),
               ],
 
-              // Bottom Stats Row: Notes, Files, Assignments Counters
+              // Bottom Stats Row: Notes, Files & Vault, Assignments Counters
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.lightBg,
-                  borderRadius: BorderRadius.circular(8),
+                  color: isDark ? const Color(0xFF0F172A) : AppColors.lightBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatItem(Icons.article_outlined, '${subject.notesCount} Notes'),
-                    _buildStatDivider(),
-                    _buildStatItem(Icons.folder_outlined, '${subject.filesCount} Files'),
-                    _buildStatDivider(),
-                    _buildStatItem(Icons.assignment_outlined, '${subject.assignmentsCount} Tasks'),
+                    _buildStatItem(context, isDark, Icons.article_outlined, '${subject.notesCount} Notes'),
+                    _buildStatDivider(isDark),
+                    _buildStatItem(context, isDark, Icons.folder_zip_outlined, '${subject.filesCount} Vault Files'),
+                    _buildStatDivider(isDark),
+                    _buildStatItem(context, isDark, Icons.assignment_outlined, '${subject.assignmentsCount} Tasks'),
                   ],
                 ),
               ),
@@ -173,25 +186,29 @@ class SubjectCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(IconData icon, String text) {
+  Widget _buildStatItem(BuildContext context, bool isDark, IconData icon, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: AppColors.lightTextSecondary),
+        Icon(icon, size: 13, color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary),
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.lightTextSecondary),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: isDark ? const Color(0xFFCBD5E1) : AppColors.lightTextSecondary,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStatDivider() {
+  Widget _buildStatDivider(bool isDark) {
     return Container(
-      height: 10,
+      height: 12,
       width: 1,
-      color: AppColors.lightBorder,
+      color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
     );
   }
 }

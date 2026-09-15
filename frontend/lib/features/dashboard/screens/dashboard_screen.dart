@@ -300,16 +300,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                         _buildActionButton(
                           context: context,
-                          icon: Icons.upload_file_rounded,
+                          icon: Icons.cloud_upload_rounded,
                           label: 'Upload File',
                           color: const Color(0xFF10B981),
                           onTap: () => UploadFileDialog.show(context),
                         ),
                         _buildActionButton(
                           context: context,
+                          icon: Icons.folder_zip_rounded,
+                          label: 'Subject Vaults',
+                          color: const Color(0xFF0EA5E9),
+                          onTap: () => context.push(RouteNames.files),
+                        ),
+                        _buildActionButton(
+                          context: context,
                           icon: Icons.assignment_turned_in_rounded,
                           label: 'Add Task',
-                          color: const Color(0xFF0EA5E9),
+                          color: const Color(0xFF8B5CF6),
                           onTap: () => showDialog(
                             context: context,
                             builder: (ctx) => const CreateEditAssignmentDialog(),
@@ -339,6 +346,156 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: 28),
 
+                    // Course Vaults & Materials Hub (PDFs, PPT, Word, Media)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text('Subject Vaults & Materials', style: AppTextStyles.titleLarge(context)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0EA5E9).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'PDF • PPT • Word • Media',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF0EA5E9),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => context.push(RouteNames.files),
+                          child: const Text('Open Drive'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    subjectsAsync.when(
+                      data: (subjects) {
+                        if (subjects.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: subjects.map((s) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: InkWell(
+                                  onTap: () => context.push('/subjects/${s.id}'),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    width: 170,
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: s.color.withValues(alpha: isDark ? 0.25 : 0.15),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Icon(s.iconData, color: s.color, size: 20),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                '${s.filesCount} files',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          s.code,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          s.name,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Open Vault',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: s.color,
+                                              ),
+                                            ),
+                                            Icon(Icons.arrow_forward_rounded, size: 14, color: s.color),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 28),
 
                     // Today's Classes & Live Timeline Section
                     Row(
@@ -715,6 +872,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     VoidCallback? onTap,
     String? phase,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap ??
           () {
@@ -726,16 +884,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.lightBorder),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+              ),
+            ),
             if (phase != null) ...[
               const SizedBox(width: 8),
               StatusBadge(label: phase, color: color, isPill: true),
@@ -747,34 +921,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildEmptyTodayCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withValues(alpha: 0.1),
+              color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.free_breakfast_outlined, color: Color(0xFF10B981), size: 36),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'No classes scheduled for today',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+            ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Enjoy your free time or configure recurring class sessions in your weekly timetable.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 13),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 18),
           ElevatedButton.icon(
@@ -795,34 +979,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildEmptyExamsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+              color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.2 : 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.school_outlined, color: Color(0xFFF59E0B), size: 36),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'No upcoming exams scheduled',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+            ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Keep track of your midterms, finals, room locations, and target scores.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 13),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 18),
           ElevatedButton.icon(
@@ -843,34 +1037,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildEmptyAssignmentsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF0EA5E9).withValues(alpha: 0.1),
+              color: const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.2 : 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.assignment_turned_in_outlined, color: Color(0xFF0EA5E9), size: 36),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'No upcoming deadlines',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+            ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'You are all caught up! Add upcoming assignments, problem sets, or project milestones.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 13),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 18),
           ElevatedButton.icon(
@@ -891,20 +1095,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildEmptySubjectsCard(BuildContext context, int semester) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 36),
@@ -912,13 +1119,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           const SizedBox(height: 14),
           Text(
             'No subjects in Semester $semester',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+            ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Add your courses to begin organizing notes, files, assignments, and exam schedules.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 13),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 18),
           ElevatedButton.icon(
@@ -935,34 +1149,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildEmptyNotesCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.lightBorder,
+        ),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+              color: const Color(0xFF6366F1).withValues(alpha: isDark ? 0.2 : 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.note_alt_outlined, color: Color(0xFF6366F1), size: 36),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'No notes created yet',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+            ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Take structured lecture notes with headings, checklists, code blocks, and tags.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.lightTextSecondary, fontSize: 13),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 18),
           ElevatedButton.icon(

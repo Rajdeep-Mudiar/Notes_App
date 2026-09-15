@@ -93,9 +93,11 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final subjectsAsync = ref.watch(subjectsProvider);
 
     return Dialog(
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 440),
@@ -118,9 +120,13 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
                       child: const Icon(Icons.create_new_folder_rounded, color: AppColors.primary, size: 22),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Create New Folder',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -130,6 +136,9 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
                 TextFormField(
                   controller: _nameController,
                   autofocus: true,
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Folder Name *',
                     hintText: 'e.g. Lecture Slides, Midterm Papers',
@@ -148,6 +157,10 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
                   subjectsAsync.when(
                     data: (subjects) => DropdownButtonFormField<String?>(
                       initialValue: _selectedSubjectId,
+                      dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFFF8FAFC) : AppColors.lightTextPrimary,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Associated Course (Optional)',
                         prefixIcon: const Icon(Icons.menu_book_rounded, size: 18),
@@ -172,9 +185,13 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
                 ],
 
                 // Color presets
-                const Text(
+                Text(
                   'Folder Color',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -193,7 +210,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
                           color: color,
                           shape: BoxShape.circle,
                           border: isSelected
-                              ? Border.all(color: Colors.black87, width: 2.5)
+                              ? Border.all(color: isDark ? Colors.white : Colors.black87, width: 2.5)
                               : null,
                         ),
                         child: isSelected
